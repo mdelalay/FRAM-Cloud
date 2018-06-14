@@ -1,0 +1,2449 @@
+---
+title: "Flow charts for methods and modelling steps"
+author: "Marie Delalay"
+date: ''
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    df_print: kable
+    fig_caption: yes
+    highlight: zenburn
+    number_sections: yes
+    toc: yes
+  word_document:
+    toc: yes
+---
+
+FIRST: READ THE LINES BELOW UNTIL THE FIRST TITLE.
+
+This file contains flow charts of modelling steps and methods.
+
+Here are instructions on how to knit this file:
+
+- **your_absolute_path** must be changed in the chunk below
+- knit this file to to html
+
+
+```{r, include = FALSE}
+#shell.exec("http://rich-iannone.github.io/DiagrammeR/graphviz_and_mermaid.html#graphviz")
+rm(list=ls())
+
+#### Set seed and options ####
+set.seed(1)
+options("scipen"=3, "digits"=6) #; ?options
+
+#### Libraries ####
+x <- c("DiagrammeR","DiagrammeRsvg")
+y <- which(!x %in% rownames (installed.packages()))
+if (length(y) >0) {install.packages(x[y])}
+lapply(x, library, character.only = TRUE)
+
+#### Knit options ####
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, results="asis", fig.cap = "", include = TRUE) # For more on chunk options, see: https://yihui.name/knitr/options/
+
+absolute_path <- "C:/Users/mdela/Dropbox/Prof/NUS/Projects/Modelling/Model"  # **your-abslolute_path**
+
+#Function to save as .snv (thanks to Kevin Mader)
+WRITE_AS_SVG <-function(in_graph, out_name = "test.svg") {
+  out_svg<-file(out_name, "w")
+  writeLines(DiagrammeRsvg::export_svg(in_graph), out_svg)
+  close(out_svg)
+  print(paste0(out_name, " in folder"))
+}
+```
+
+# Template
+
+Results of the template are hidden. 
+
+```{r, results="hide"}
+
+name_xxx_empty <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] data not present in previous stages / response in general
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [2] data present in next stage / final output
+        node [color = orange, shape = triangle, style = filled, fillcolor= OldLace, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [3] operations  / conditions or questions                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [7] data from previous stages  / response in model
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 'xxx'
+        }
+        
+        # [5] edges      
+        subgraph cluster { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        }
+        
+        }
+        
+        ")
+
+name_xxx_empty
+
+#WRITE_AS_SVG(name_xxx_empty,"nice.svg")
+```
+
+# Modelling steps of the vulnerability and damage papers
+
+## Overview flow model
+
+```{r}
+name_010 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Overview flow model
+        'Flow1 and Flow2: flood raster (i in [1,I])';
+        'Flow3: possible toe raster (i in [1,I])';
+        'output of hazard module'        
+        'Flow4: HPP value raster (k in [1,K]) ';
+        'Flow4: road value raster ';
+        'Flow4: settlement value raster (k in [1,K]) ';
+        'Flow4: farmland value raster';
+        'output of asset module';
+        'Flow6: sampled landslides and hazard rasters';
+        'Flow7 to Flow10: PAE and sampled MDD';
+        'Distribution of direct and ind. damages'   
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## aggregation module        
+        'Monte-Carlo simulations (j in [1,J])'
+
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        'I. hazard module'
+        'II. asset module'
+        'III. aggregation module'
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges      
+        subgraph cluster_11 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'I. hazard module' -> {'Flow1 and Flow2: flood raster (i in [1,I])' 'Flow3: possible toe raster (i in [1,I])'}
+        {'Flow1 and Flow2: flood raster (i in [1,I])' 'Flow3: possible toe raster (i in [1,I])'} -> 'output of hazard module'
+        }
+        
+        # [5] edges      
+        subgraph cluster_12 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'II. asset module' -> {'Flow4: HPP value raster (k in [1,K]) ' 'Flow4: road value raster ''Flow4: settlement value raster (k in [1,K]) ''Flow4: farmland value raster'}
+        {'Flow4: HPP value raster (k in [1,K]) ' 'Flow4: road value raster ''Flow4: settlement value raster (k in [1,K]) ''Flow4: farmland value raster'} -> 'output of asset module'
+        }
+        
+        # [5] edges      
+        subgraph cluster_13 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'output of asset module' 'output of hazard module'} -> 'III. aggregation module'
+        'III. aggregation module' -> 'Monte-Carlo simulations (j in [1,J])'
+        {'Monte-Carlo simulations (j in [1,J])'} -> {'Flow6: sampled landslides and hazard rasters' 'Flow7 to Flow10: PAE and sampled MDD'}
+        {'Flow6: sampled landslides and hazard rasters' 'Flow7 to Flow10: PAE and sampled MDD'} -> 'Distribution of direct and ind. damages'
+        }
+        
+        }
+        ")
+
+name_010
+```
+
+
+## (01) - Hazard module: Floods, data preparation
+
+```{r}
+name_020 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, data preparation        
+        'unfilled DEM raster';
+        'polygon of watershed with outlet at Dolalghat';  
+        'results of DEM validation';
+        'DEM raster';
+        'boolean river raster';
+        'slope raster';
+        'polygon of study area';
+        'river reach ID raster';
+        'river reach ID buffer raster';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, data preparation        
+        'ArcGIS analysis'; 
+        'elevation RMSE';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, data preparation
+        'SRTM 1 arc-sec rasters'; 'ASTER 1 arc-sec rasters';
+        'GPS measurements';
+        'polygon of Nepal by district';
+        
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same;
+        }
+        
+        # [5] edges
+        subgraph cluster_21 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'SRTM 1 arc-sec rasters' 'ASTER 1 arc-sec rasters'} ->'unfilled DEM raster'
+        'unfilled DEM raster' 
+        }
+        
+        # [5] edges
+        subgraph cluster_22 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        #1.5
+        'unfilled DEM raster' -> 'ArcGIS analysis'
+        'ArcGIS analysis' -> {'polygon of watershed with outlet at Dolalghat' 'DEM raster' 'boolean river raster' 'slope raster' 'river reach ID buffer raster'}
+        {'polygon of watershed with outlet at Dolalghat' 'polygon of Nepal by district'} -> 'polygon of study area'
+        }
+        
+        # [5] edges
+        subgraph cluster_23 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'DEM raster' 'GPS measurements'} -> 'elevation RMSE' 
+        'elevation RMSE' -> 'results of DEM validation'
+        }
+        
+        # [5] edges
+        subgraph cluster_24 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'river reach ID buffer raster' 'boolean river raster'} -> 'river reach ID raster'
+        }
+        
+        }
+        ")
+
+name_020
+```
+
+## (02) - Hazard module: Floods, flood raster
+
+```{r}
+name_030 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, flood raster
+        'i-th flood raster';  
+        'i-th initial water stages by river reach'; 
+        'results of validation of initial water stages';
+        'initial water stage raster'; 
+        'DEM raster';
+        'river reach ID raster'
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, flood raster
+        'distribution fitting'; 
+        'quantile derivation'; 
+        'dependencies of initial water stages'; 
+        '(if DHM data available)';
+        '(if DHM data not available)'; 
+        'RMSE of initial water stage' 'flood function';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, flood raster
+        'empirical 99%-quantile of water stage (1)'; 
+        'empirical 99%-quantile of water stage (2)';
+        'DHM data: water discharge and water stage';
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges
+        subgraph cluster_31 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        '(if DHM data available)' -> 'DHM data: water discharge and water stage'
+        '(if DHM data not available)'-> 'empirical 99%-quantile of water stage (1)'
+        {'DHM data: water discharge and water stage' 'empirical 99%-quantile of water stage (1)'}-> 'distribution fitting'
+        'distribution fitting' -> 'quantile derivation'
+        {'quantile derivation' 'dependencies of initial water stages'} -> 'i-th initial water stages by river reach'
+        }
+        
+        # [5] edges 
+        subgraph cluster_32 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'i-th initial water stages by river reach' 'empirical 99%-quantile of water stage (2)'} -> 'RMSE of initial water stage' -> 'results of validation of initial water stages'
+        }
+        
+        # [5] edges
+        subgraph cluster_33 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'river reach ID raster' 'i-th initial water stages by river reach'} -> 'initial water stage raster'
+        {'initial water stage raster' 'DEM raster'} -> 'flood function' -> 'i-th flood raster'
+        }
+        
+        }
+        ")
+
+name_030
+```
+
+## (03) - Hazard module: raster of possible landslides
+
+```{r}
+name_040 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: raster of possible landslides
+        'slope raster' 
+        'boolean slope >30% raster'; 
+        'orientation at flood curve raster'; 
+        'rock weight raster'; 
+        'angle at flood curve raster'; 
+        'angle weight raster'; 
+        'toe orientation raster'; 
+        'toe weight raster' ;
+        'average size of landslides'; 
+        'j-th ratio of landslide count'; 
+        'boolean river raster';
+        'polygon riparian areas';
+        'i-th possible toe raster'
+        'i-th flood raster'
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'select flooded toes';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: raster of possible landslides
+        'data on rocks and geology'; 
+        'polygons of geological formations';  
+        'data on weights given angle'; 
+        'landslide history data';
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges
+        subgraph cluster_41 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'slope raster' -> 'boolean slope >30% raster'
+        'boolean river raster' -> 'orientation at flood curve raster'
+        {'boolean slope >30% raster' 'orientation at flood curve raster'}  -> 'toe orientation raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_42 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'data on rocks and geology' 'polygons of geological formations'} -> 'rock weight raster'   
+        {'boolean river raster' 'orientation at flood curve raster'} -> 'angle at flood curve raster' 
+        {'angle at flood curve raster' 'data on weights given angle'} -> 'angle weight raster' 
+        {'angle weight raster' 'rock weight raster'} -> 'toe weight raster' 
+        }
+        
+        # [5] edges
+        subgraph cluster_43 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'landslide history data' -> 'average size of landslides'
+        'boolean river raster'  -> 'polygon riparian areas'
+        {'landslide history data' 'polygon riparian areas'} -> 'j-th ratio of landslide count'
+        }
+
+        # [5] edges
+        subgraph cluster_44 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'toe orientation raster' 'i-th flood raster'} -> 'select flooded toes' 
+        'select flooded toes' -> 'i-th possible toe raster'
+        }
+
+        }
+        ")
+name_040
+
+```
+
+## (04) - Asset module: value rasters
+
+```{r}
+name_050 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Asset module: value rasters
+        'k-th HPP asset raster' 
+        'k-th HPP revenue raster' 
+        'road asset raster' 
+        'LULC raster' 
+        'boolean settlement raster' 
+        'boolean farmland raster' 
+        'k-th settlement asset raster' 
+        'farmland asset raster';
+        'k-th points of HW and PH locations'
+
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Asset module: value rasters
+        'polygons of HPPs lease areas' 
+        'data on location of HW and PH' 
+        'data on unit cost per MW' 
+        'data on maximum revenue per MW' 
+        'boolean road raster' 
+        'data on unit cost per km' 
+        'Sentinel data' 
+        'data on unit cost and HH density' 
+        'data on farm gate price and crop type';
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }        
+        
+
+        # [5] edges
+        subgraph cluster_52 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'polygons of HPPs lease areas' 'data on location of HW and PH'} -> 'k-th points of HW and PH locations'
+        {'data on unit cost per MW'  'k-th points of HW and PH locations'} -> 'k-th HPP asset raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_52 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'data on maximum revenue per MW' 'k-th points of HW and PH locations'} -> 'k-th HPP revenue raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_53 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'data on unit cost per km' 'boolean road raster'} -> 'road asset raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_54 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Sentinel data' -> 'LULC raster'
+        'LULC raster' -> 'boolean settlement raster'
+        {'boolean settlement raster' 'data on unit cost and HH density'} -> 'k-th settlement asset raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_54 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'LULC raster' -> 'boolean farmland raster' #15
+        {'boolean farmland raster' 'data on farm gate price and crop type'} -> 'farmland asset raster'
+        }
+        
+        }
+        ")
+
+name_050
+
+```
+
+## (05) - Aggregation module: PAE and MDD
+
+```{r}
+
+name_060 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: PAE and MDD
+        'HPP PAE';
+        'road PAE'; 
+        'settlement PAE';
+        'farmland PAE'; '(i*j*k)-th HPP MDD';
+        '(i*j)-th road MDD';
+        '(i*j*k)-th settlement MDD';
+        '(i*j)-th farmland MDD';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: PAE and MDD        
+        'set deterministic PAE';
+        'parameterise stochastic MDD';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: PAE and MDD        
+        'asset valuation data';
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }         
+        
+        # [5] edges
+        subgraph cluster_61 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'asset valuation data'
+        }
+        
+        # [5] edges
+        subgraph cluster_62 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'asset valuation data' -> 'set deterministic PAE' 
+        'set deterministic PAE' -> {'HPP PAE' 'road PAE' 'settlement PAE' 'farmland PAE'}
+        }
+        
+        # [5] edges 
+        subgraph cluster_63 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'asset valuation data' -> 'parameterise stochastic MDD'
+        'parameterise stochastic MDD' -> {'(i*j*k)-th HPP MDD' '(i*j)-th road MDD' '(i*j*k)-th settlement MDD' '(i*j)-th farmland MDD'}
+        }        
+        
+        }
+        ")
+
+name_060
+
+```
+
+## (06) - Aggregation module: hazard rasters
+
+```{r}
+
+name_070 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: hazard rasters
+        'i-th possible toe raster'; 
+        '(i*j)-th actual landslide raster'; 
+        'i-th flood raster'; 
+        'j-th ratio of landslide count'; 
+        'toe weight raster'; 
+        'average size of landslides'; 
+        '(i*j)-th hazard raster';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: hazard rasters
+        'build-landslide function';
+        'join hazards';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges      
+        subgraph cluster_71 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'j-th ratio of landslide count' 'i-th possible toe raster' 'toe weight raster' 'average size of landslides'} -> 'build-landslide function' 
+        'build-landslide function' -> '(i*j)-th actual landslide raster'
+        {'i-th flood raster''(i*j)-th actual landslide raster'} -> 'join hazards' 
+        'join hazards' -> '(i*j)-th hazard raster' 
+        }
+        
+        }
+        ")
+
+name_070
+
+```
+
+## (07) - Aggregation module - HPP
+
+```{r}
+name_080 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module - HPP
+        '(i*j)-th hazard raster';
+        'k-th HPP asset raster';
+        '(i*j*k)-th HPP exposure raster';
+        '(i*j*k)-th HPP damaged exposure raster'; 
+        '(i*j*k)-th direct damages to HPP'; 
+        '(i*j*k)-th indirect damages to HPP';
+        'HPP PAE';
+        'k-th HPP revenue raster';
+        '(i*j*k)-th HPP MDD';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        # Aggregation module - HPP
+        'subset and conditional on MDD'
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph cluster_82 {
+        rank = same; '(i*j*k)-th indirect damages to HPP' '(i*j*k)-th direct damages to HPP'
+        }
+        
+        # [5] edges
+        subgraph cluster_81 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'k-th HPP asset raster' '(i*j)-th hazard raster'} -> '(i*j*k)-th HPP exposure raster'
+        {'HPP PAE' '(i*j*k)-th HPP exposure raster'} -> '(i*j*k)-th HPP damaged exposure raster'
+        {'(i*j*k)-th HPP MDD' '(i*j*k)-th HPP damaged exposure raster'} -> '(i*j*k)-th direct damages to HPP'
+        {'(i*j*k)-th HPP MDD' '(i*j*k)-th HPP damaged exposure raster' 'k-th HPP revenue raster'} -> 'subset and conditional on MDD' 
+        'subset and conditional on MDD' -> '(i*j*k)-th indirect damages to HPP' 
+        }
+        
+        }
+        ")
+
+name_080
+```
+
+## (08) - Aggregation module - road
+
+
+```{r}
+name_090 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module - road
+        '(i*j)-th hazard raster';
+        '(i*j)-th road exposure raster'; 
+        '(i*j)-th road damaged exposure raster';
+        '(i*j)-th mean road MDD';
+        '(i*j)-th direct damages to road'; 
+        '(i*j)-th indirect damages to road';
+        'road asset raster';
+        'road PAE';
+        '(i*j)-th road MDD';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'data on (1) duration road closure and (2) customs revenues';        
+
+
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph cluster_91 {
+        rank = same; '(i*j)-th indirect damages to road' '(i*j)-th direct damages to road'
+        }
+        
+        # [5] edges
+        subgraph cluster_92 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'road asset raster' '(i*j)-th hazard raster'} -> '(i*j)-th road exposure raster' # 17b
+        {'road PAE' '(i*j)-th road exposure raster'} -> '(i*j)-th road damaged exposure raster'  #17b
+        {'(i*j)-th road MDD' '(i*j)-th road damaged exposure raster'} -> '(i*j)-th direct damages to road' #17b
+        {'(i*j)-th road MDD'} -> '(i*j)-th mean road MDD' #17b
+        {'(i*j)-th mean road MDD' 'data on (1) duration road closure and (2) customs revenues'} -> '(i*j)-th indirect damages to road' # 17b
+        }
+        
+        }
+        ")
+
+name_090
+```
+
+## (09) - Aggregation module - settlement
+```{r}
+name_100 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module - settlement
+        '(i*j)-th hazard raster'        
+        '(i*j*k)-th settlement exposure raster';  
+        '(i*j*k)-th settlement damaged exposure raster';
+        '(i*j*k)-th direct damages to settlement'; 
+        '(i*j)-th indirect damages to settlement';
+        'k-th settlement asset raster';
+        'settlement PAE';
+        '(i*j)-th mean road MDD';
+        '(i*j*k)-th settlement MDD'
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'data on road-related income';        
+
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph cluster_101 {
+        rank = same; '(i*j*k)-th direct damages to settlement' '(i*j)-th indirect damages to settlement';
+        }
+        
+        # [5] edges
+        subgraph cluster_102 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'k-th settlement asset raster' '(i*j)-th hazard raster'} -> '(i*j*k)-th settlement exposure raster' # 17b
+        {'settlement PAE' '(i*j*k)-th settlement exposure raster'} -> '(i*j*k)-th settlement damaged exposure raster'  #17b
+        {'(i*j*k)-th settlement MDD' '(i*j*k)-th settlement damaged exposure raster'} -> '(i*j*k)-th direct damages to settlement' #17b
+        {'(i*j)-th mean road MDD' 'data on road-related income'} -> '(i*j)-th indirect damages to settlement' # 17b
+        }
+        
+        }
+        ")
+
+name_100
+```
+
+
+## (10) - Aggregation module - farmland
+```{r}
+name_110 <- 
+grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+      
+      # [1] intermediary data / output data
+      node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+      ## Aggregation module - farmland
+      '(i*j)-th hazard raster'        
+      '(i*j)-th farmland exposure raster';  
+      '(i*j)-th farmland damaged exposure raster';
+      '(i*j)-th direct damages to farmland';
+      'farmland asset raster';
+      '(i*j)-th hazard raster';
+      'farmland PAE';
+      '(i*j)-th farmland MDD';
+      
+      # [3] operations                
+      node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+      
+      # [7] input data
+      node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+      
+      # [6] title names
+      node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+      
+      # [4] sort or separate
+      subgraph cluster_111 {
+      rank = same; '(i*j)-th direct damages to farmland'
+      }
+      
+      # [5] edges
+      subgraph cluster_112 {
+      edge [color = grey, arrowhead = vee, arrowtail = none]
+      {'farmland asset raster' '(i*j)-th hazard raster'} -> '(i*j)-th farmland exposure raster' 
+      {'farmland PAE' '(i*j)-th farmland exposure raster'} -> '(i*j)-th farmland damaged exposure raster' 
+      {'(i*j)-th farmland MDD' '(i*j)-th farmland damaged exposure raster'} -> '(i*j)-th direct damages to farmland'
+      }
+      
+      }
+      ")
+
+name_110
+```
+
+## Vulnerability
+```{r}
+name_120 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Vulnerability
+        'settlement VDC ID raster'; 
+        'i-th settlement vulnerability raster';
+        'farmland VDC ID raster'; 
+        'i-th farmland vulnerability raster';
+        'boolean settlement raster'; 
+        'boolean farmland raster';
+        'i-th count of household and population at risk of flood'; 
+        'i-th flood risk hotspots for settlement by VDC'; 
+        'i-th flood risk hotspots for farmland by VDC';
+        'LULC raster'
+        'i-th flood raster';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Vulnerability       
+        'intersect rasters for settlement'
+        'intersect rasters for farmland'
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Vulnerability
+        'VDC ID raster';
+        'data on HH count and population count'
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph cluster_121 {
+        rank = same; 'i-th count of household and population at risk of flood' 'i-th flood risk hotspots for settlement by VDC' 'i-th flood risk hotspots for farmland by VDC'
+        }
+        
+        # [5] edges      
+        subgraph cluster_124 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'LULC raster'
+        'VDC ID raster'
+        'i-th flood raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_122 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'LULC raster'-> 'boolean settlement raster'
+        {'boolean settlement raster' 'VDC ID raster'} -> 'settlement VDC ID raster'
+        {'settlement VDC ID raster' 'i-th flood raster'} -> 'intersect rasters for settlement'
+        'intersect rasters for settlement' -> 'i-th settlement vulnerability raster'
+        {'i-th settlement vulnerability raster' 'data on HH count and population count'} -> 'i-th count of household and population at risk of flood'
+        'i-th settlement vulnerability raster' -> 'i-th flood risk hotspots for settlement by VDC'
+        }
+        
+        # [5] edges
+        subgraph cluster_123 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'LULC raster'-> 'boolean farmland raster'
+        {'boolean farmland raster' 'VDC ID raster'} -> 'farmland VDC ID raster'
+        {'farmland VDC ID raster' 'i-th flood raster'} -> 'intersect rasters for farmland'
+        'intersect rasters for farmland' -> 'i-th farmland vulnerability raster'
+        'i-th farmland vulnerability raster' -> 'i-th flood risk hotspots for farmland by VDC'
+        }
+        
+        }
+        ")
+
+name_120
+```
+
+## Consolidated modules - all
+
+```{r, results="asis"}
+
+name_1000 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+
+#--------------------------------------- 
+       
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, data preparation        
+        'unfilled DEM raster';
+        'polygon of watershed with outlet at Dolalghat';  
+        'results of DEM validation';
+        'DEM raster';
+        'boolean river raster';
+        'slope raster';
+        'polygon of study area';
+        'river reach ID raster';
+        'river reach ID buffer raster';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, data preparation        
+        'ArcGIS analysis'; 
+        'elevation RMSE';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, data preparation
+        'SRTM 1 arc-sec rasters'; 'ASTER 1 arc-sec rasters';
+        'GPS measurements';
+        'polygon of Nepal by district';
+        
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same;
+        }
+        
+        # [5] edges
+        subgraph cluster_20 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'SRTM 1 arc-sec rasters' 'ASTER 1 arc-sec rasters'} ->'unfilled DEM raster'
+        'unfilled DEM raster' 
+        }
+        
+        # [5] edges
+        subgraph cluster_20 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        #1.5
+        'unfilled DEM raster' -> 'ArcGIS analysis'
+        'ArcGIS analysis' -> {'polygon of watershed with outlet at Dolalghat' 'DEM raster' 'boolean river raster' 'slope raster' 'river reach ID buffer raster'}
+        {'polygon of watershed with outlet at Dolalghat' 'polygon of Nepal by district'} -> 'polygon of study area'
+        }
+        
+        # [5] edges
+        subgraph cluster_20 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'DEM raster' 'GPS measurements'} -> 'elevation RMSE' 
+        'elevation RMSE' -> 'results of DEM validation'
+        }
+        
+        # [5] edges
+        subgraph cluster_20 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'river reach ID buffer raster' 'boolean river raster'} -> 'river reach ID raster'
+        }
+        
+#------------------------------
+
+ # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, flood raster
+        'i-th flood raster';  
+        'i-th initial water stages by river reach'; 
+        'results of validation of initial water stages';
+        'initial water stage raster'; 
+        'DEM raster';
+        'river reach ID raster'
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, flood raster
+        'distribution fitting'; 
+        'quantile derivation'; 
+        'dependencies of initial water stages'; 
+        '(if DHM data available)';
+        '(if DHM data not available)'; 
+        'RMSE of initial water stage' 'flood function';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, flood raster
+        'empirical 99%-quantile of water stage (1)'; 
+        'empirical 99%-quantile of water stage (2)';
+        'DHM data: water discharge and water stage';
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges
+        subgraph cluster_30 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        '(if DHM data available)' -> 'DHM data: water discharge and water stage'
+        '(if DHM data not available)'-> 'empirical 99%-quantile of water stage (1)'
+        {'DHM data: water discharge and water stage' 'empirical 99%-quantile of water stage (1)'}-> 'distribution fitting'
+        'distribution fitting' -> 'quantile derivation'
+        {'quantile derivation' 'dependencies of initial water stages'} -> 'i-th initial water stages by river reach'
+        }
+        
+        # [5] edges 
+        subgraph cluster_30 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'i-th initial water stages by river reach' 'empirical 99%-quantile of water stage (2)'} -> 'RMSE of initial water stage' -> 'results of validation of initial water stages'
+        }
+        
+        # [5] edges
+        subgraph cluster_30 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'river reach ID raster' 'i-th initial water stages by river reach'} -> 'initial water stage raster'
+        {'initial water stage raster' 'DEM raster'} -> 'flood function' -> 'i-th flood raster'
+        }
+
+#------------------------------
+
+   # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: raster of possible landslides
+        'slope raster' 
+        'boolean slope >30% raster'; 
+        'orientation at flood curve raster'; 
+        'rock weight raster'; 
+        'angle at flood curve raster'; 
+        'angle weight raster'; 
+        'toe orientation raster'; 
+        'toe weight raster' ;
+        'average size of landslides'; 
+        'j-th ratio of landslide count'; 
+        'boolean river raster';
+        'polygon riparian areas';
+        'i-th possible toe raster'
+        'i-th flood raster'
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'select flooded toes';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: raster of possible landslides
+        'data on rocks and geology'; 
+        'polygons of geological formations';  
+        'data on weights given angle'; 
+        'landslide history data';
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges
+        subgraph cluster_40 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'slope raster' -> 'boolean slope >30% raster'
+        'boolean river raster' -> 'orientation at flood curve raster'
+        {'boolean slope >30% raster' 'orientation at flood curve raster'}  -> 'toe orientation raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_40 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'data on rocks and geology' 'polygons of geological formations'} -> 'rock weight raster'   
+        {'boolean river raster' 'orientation at flood curve raster'} -> 'angle at flood curve raster' 
+        {'angle at flood curve raster' 'data on weights given angle'} -> 'angle weight raster' 
+        {'angle weight raster' 'rock weight raster'} -> 'toe weight raster' 
+        }
+        
+        # [5] edges
+        subgraph cluster_40 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'landslide history data' -> 'average size of landslides'
+        'boolean river raster'  -> 'polygon riparian areas'
+        {'landslide history data' 'polygon riparian areas'} -> 'j-th ratio of landslide count'
+        }
+
+        # [5] edges
+        subgraph cluster_40 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'toe orientation raster' 'i-th flood raster'} -> 'select flooded toes' 
+        'select flooded toes' -> 'i-th possible toe raster'
+        }
+
+
+#--------------------------------
+
+     # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Asset module: value rasters
+        'k-th HPP asset raster' 
+        'k-th HPP revenue raster' 
+        'road asset raster' 
+        'LULC raster' 
+        'boolean settlement raster' 
+        'boolean farmland raster' 
+        'k-th settlement asset raster' 
+        'farmland asset raster';
+        'k-th points of HW and PH locations'
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Asset module: value rasters
+        'polygons of HPPs lease areas' 
+        'data on location of HW and PH' 
+        'data on unit cost per MW' 
+        'data on maximum revenue per MW' 
+        'boolean road raster' 
+        'data on unit cost per km' 
+        'Sentinel data' 
+        'data on unit cost and HH density' 
+        'data on farm gate price and crop type';
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }        
+        
+
+        # [5] edges
+        subgraph cluster_50 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'polygons of HPPs lease areas' 'data on location of HW and PH'} -> 'k-th points of HW and PH locations'
+        {'data on unit cost per MW'  'k-th points of HW and PH locations'} -> 'k-th HPP asset raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_50 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'data on maximum revenue per MW' 'k-th points of HW and PH locations'} -> 'k-th HPP revenue raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_50 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'data on unit cost per km' 'boolean road raster'} -> 'road asset raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_50 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Sentinel data' -> 'LULC raster'
+        'LULC raster' -> 'boolean settlement raster'
+        {'boolean settlement raster' 'data on unit cost and HH density'} -> 'k-th settlement asset raster'
+        'k-th settlement asset raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_50 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'LULC raster' -> 'boolean farmland raster' #15
+        {'boolean farmland raster' 'data on farm gate price and crop type'} -> 'farmland asset raster'
+        'farmland asset raster'
+        }
+
+#------------------------
+
+  # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: PAE and MDD
+        'HPP PAE';
+        'road PAE'; 
+        'settlement PAE';
+        'farmland PAE'; '(i*j*k)-th HPP MDD';
+        '(i*j)-th road MDD';
+        '(i*j*k)-th settlement MDD';
+        '(i*j)-th farmland MDD';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: PAE and MDD        
+        'set deterministic PAE';
+        'parameterise stochastic MDD';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: PAE and MDD        
+        'asset valuation data';
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }         
+        
+        # [5] edges
+        subgraph cluster_60 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'asset valuation data'
+        }
+        
+        # [5] edges
+        subgraph cluster_60 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'asset valuation data' -> 'set deterministic PAE' 
+        'set deterministic PAE' -> {'HPP PAE' 'road PAE' 'settlement PAE' 'farmland PAE'}
+        }
+        
+        # [5] edges 
+        subgraph cluster_60 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'asset valuation data' -> 'parameterise stochastic MDD'
+        'parameterise stochastic MDD' -> {'(i*j*k)-th HPP MDD' '(i*j)-th road MDD' '(i*j*k)-th settlement MDD' '(i*j)-th farmland MDD'}
+        }      
+
+#---------------------
+
+  # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: hazard rasters
+        'i-th possible toe raster'; 
+        '(i*j)-th actual landslide raster'; 
+        'i-th flood raster'; 
+        'j-th ratio of landslide count'; 
+        'toe weight raster'; 
+        'average size of landslides'; 
+        '(i*j)-th hazard raster';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: hazard rasters
+        'build-landslide function';
+        'join hazards';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges      
+        subgraph cluster_70 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'j-th ratio of landslide count' 'i-th possible toe raster' 'toe weight raster' 'average size of landslides'} -> 'build-landslide function' 
+        'build-landslide function' -> '(i*j)-th actual landslide raster'
+        {'i-th flood raster''(i*j)-th actual landslide raster'} -> 'join hazards' 
+        'join hazards' -> '(i*j)-th hazard raster' 
+        }
+        
+#------------------------------
+
+ # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module - HPP
+        '(i*j)-th hazard raster';
+        'k-th HPP asset raster';
+        '(i*j*k)-th HPP exposure raster';
+        '(i*j*k)-th HPP damaged exposure raster'; 
+        '(i*j*k)-th direct damages to HPP'; 
+        '(i*j*k)-th indirect damages to HPP';
+        'HPP PAE';
+        'k-th HPP revenue raster';
+        '(i*j*k)-th HPP MDD';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        # Aggregation module - HPP
+        'subset and conditional on MDD'
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph cluster_80 {
+        rank = same; '(i*j*k)-th indirect damages to HPP' '(i*j*k)-th direct damages to HPP'
+        }
+        
+        # [5] edges
+        subgraph cluster_80 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'k-th HPP asset raster' '(i*j)-th hazard raster'} -> '(i*j*k)-th HPP exposure raster'
+        {'HPP PAE' '(i*j*k)-th HPP exposure raster'} -> '(i*j*k)-th HPP damaged exposure raster'
+        {'(i*j*k)-th HPP MDD' '(i*j*k)-th HPP damaged exposure raster'} -> '(i*j*k)-th direct damages to HPP'
+        {'(i*j*k)-th HPP MDD' '(i*j*k)-th HPP damaged exposure raster' 'k-th HPP revenue raster'} -> 'subset and conditional on MDD' 
+        'subset and conditional on MDD' -> '(i*j*k)-th indirect damages to HPP' 
+        }
+
+# ------------------------------
+
+ # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module - road
+        '(i*j)-th hazard raster';
+        '(i*j)-th road exposure raster'; 
+        '(i*j)-th road damaged exposure raster';
+        '(i*j)-th mean road MDD';
+        '(i*j)-th direct damages to road'; 
+        '(i*j)-th indirect damages to road';
+        'road asset raster';
+        'road PAE';
+        '(i*j)-th road MDD';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'data on (1) duration road closure and (2) customs revenues';        
+
+
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph cluster_90 {
+        rank = same; '(i*j)-th indirect damages to road' '(i*j)-th direct damages to road'
+        }
+        
+        # [5] edges
+        subgraph cluster_90 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'road asset raster' '(i*j)-th hazard raster'} -> '(i*j)-th road exposure raster' # 17b
+        {'road PAE' '(i*j)-th road exposure raster'} -> '(i*j)-th road damaged exposure raster'  #17b
+        {'(i*j)-th road MDD' '(i*j)-th road damaged exposure raster'} -> '(i*j)-th direct damages to road' #17b
+        {'(i*j)-th road MDD'} -> '(i*j)-th mean road MDD' #17b
+        {'(i*j)-th mean road MDD' 'data on (1) duration road closure and (2) customs revenues'} -> '(i*j)-th indirect damages to road' # 17b
+        }
+
+
+#---------------------
+# [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module - settlement
+        '(i*j)-th hazard raster'        
+        '(i*j*k)-th settlement exposure raster';  
+        '(i*j*k)-th settlement damaged exposure raster';
+        '(i*j*k)-th direct damages to settlement'; 
+        '(i*j)-th indirect damages to settlement';
+        'k-th settlement asset raster';
+        'settlement PAE';
+        '(i*j)-th mean road MDD';
+        '(i*j*k)-th settlement MDD'
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'data on road-related income';        
+
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph cluster_100 {
+        rank = same; '(i*j*k)-th direct damages to settlement' '(i*j)-th indirect damages to settlement';
+        }
+        
+        # [5] edges
+        subgraph cluster_100 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'k-th settlement asset raster' '(i*j)-th hazard raster'} -> '(i*j*k)-th settlement exposure raster' # 17b
+        {'settlement PAE' '(i*j*k)-th settlement exposure raster'} -> '(i*j*k)-th settlement damaged exposure raster'  #17b
+        {'(i*j*k)-th settlement MDD' '(i*j*k)-th settlement damaged exposure raster'} -> '(i*j*k)-th direct damages to settlement' #17b
+        {'(i*j)-th mean road MDD' 'data on road-related income'} -> '(i*j)-th indirect damages to settlement' # 17b
+        }
+ 
+#------------------------------------------
+
+# [1] intermediary data / output data
+      node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+      ## Aggregation module - farmland
+      '(i*j)-th hazard raster'        
+      '(i*j)-th farmland exposure raster';  
+      '(i*j)-th farmland damaged exposure raster';
+      '(i*j)-th direct damages to farmland';
+      'farmland asset raster';
+      '(i*j)-th hazard raster';
+      'farmland PAE';
+      '(i*j)-th farmland MDD';
+      
+      # [3] operations                
+      node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+      
+      # [7] input data
+      node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+      
+      # [6] title names
+      node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+      
+      # [4] sort or separate
+      subgraph cluster_110 {
+      rank = same; '(i*j)-th direct damages to farmland'
+      }
+      
+      # [5] edges
+      subgraph cluster_110 {
+      edge [color = grey, arrowhead = vee, arrowtail = none]
+      {'farmland asset raster' '(i*j)-th hazard raster'} -> '(i*j)-th farmland exposure raster' 
+      {'farmland PAE' '(i*j)-th farmland exposure raster'} -> '(i*j)-th farmland damaged exposure raster' 
+      {'(i*j)-th farmland MDD' '(i*j)-th farmland damaged exposure raster'} -> '(i*j)-th direct damages to farmland'
+      }
+             
+        }
+        ")
+
+name_1000
+
+```
+
+## Consolidated modules - hazard module and aggregation module (hazard rasters only)
+
+```{r, results="asis"}
+
+name_1100 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+#---------------------------------------
+
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, data preparation        
+        'unfilled DEM raster';
+        'polygon of watershed with outlet at Dolalghat';  
+        'results of DEM validation';
+        'DEM raster';
+        'boolean river raster';
+        'slope raster';
+        'polygon of study area';
+        'river reach ID raster';
+        'river reach ID buffer raster';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, data preparation        
+        'ArcGIS analysis'; 
+        'elevation RMSE';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, data preparation
+        'SRTM 1 arc-sec rasters'; 'ASTER 1 arc-sec rasters';
+        'GPS measurements';
+        'polygon of Nepal by district';
+        
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same;
+        }
+        
+        # [5] edges
+        subgraph cluster_20 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'SRTM 1 arc-sec rasters' 'ASTER 1 arc-sec rasters'} ->'unfilled DEM raster'
+        'unfilled DEM raster' 
+        }
+        
+        # [5] edges
+        subgraph cluster_20 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        #1.5
+        'unfilled DEM raster' -> 'ArcGIS analysis'
+        'ArcGIS analysis' -> {'polygon of watershed with outlet at Dolalghat' 'DEM raster' 'boolean river raster' 'slope raster' 'river reach ID buffer raster'}
+        {'polygon of watershed with outlet at Dolalghat' 'polygon of Nepal by district'} -> 'polygon of study area'
+        }
+        
+        # [5] edges
+        subgraph cluster_20 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'DEM raster' 'GPS measurements'} -> 'elevation RMSE' 
+        'elevation RMSE' -> 'results of DEM validation'
+        }
+        
+        # [5] edges
+        subgraph cluster_20 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'river reach ID buffer raster' 'boolean river raster'} -> 'river reach ID raster'
+        }
+        
+#------------------------------
+
+ # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, flood raster
+        'i-th flood raster';  
+        'i-th initial water stages by river reach'; 
+        'results of validation of initial water stages';
+        'initial water stage raster'; 
+        'DEM raster';
+        'river reach ID raster'
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, flood raster
+        'distribution fitting'; 
+        'quantile derivation'; 
+        'dependencies of initial water stages'; 
+        '(if DHM data available)';
+        '(if DHM data not available)'; 
+        'RMSE of initial water stage' 'flood function';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: Floods, flood raster
+        'empirical 99%-quantile of water stage (1)'; 
+        'empirical 99%-quantile of water stage (2)';
+        'DHM data: water discharge and water stage';
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges
+        subgraph cluster_30 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        '(if DHM data available)' -> 'DHM data: water discharge and water stage'
+        '(if DHM data not available)'-> 'empirical 99%-quantile of water stage (1)'
+        {'DHM data: water discharge and water stage' 'empirical 99%-quantile of water stage (1)'}-> 'distribution fitting'
+        'distribution fitting' -> 'quantile derivation'
+        {'quantile derivation' 'dependencies of initial water stages'} -> 'i-th initial water stages by river reach'
+        }
+        
+        # [5] edges 
+        subgraph cluster_30 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'i-th initial water stages by river reach' 'empirical 99%-quantile of water stage (2)'} -> 'RMSE of initial water stage' -> 'results of validation of initial water stages'
+        }
+        
+        # [5] edges
+        subgraph cluster_30 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'river reach ID raster' 'i-th initial water stages by river reach'} -> 'initial water stage raster'
+        {'initial water stage raster' 'DEM raster'} -> 'flood function' -> 'i-th flood raster'
+        }
+
+#------------------------------
+
+    # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: raster of possible landslides
+        'slope raster' 
+        'boolean slope >30% raster'; 
+        'orientation at flood curve raster'; 
+        'rock weight raster'; 
+        'angle at flood curve raster'; 
+        'angle weight raster'; 
+        'toe orientation raster'; 
+        'toe weight raster' ;
+        'average size of landslides'; 
+        'j-th ratio of landslide count'; 
+        'boolean river raster';
+        'polygon riparian areas';
+        'i-th possible toe raster'
+        'i-th flood raster'
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'select flooded toes';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Hazard module: raster of possible landslides
+        'data on rocks and geology'; 
+        'polygons of geological formations';  
+        'data on weights given angle'; 
+        'landslide history data';
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges
+        subgraph cluster_40 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'slope raster' -> 'boolean slope >30% raster'
+        'boolean river raster' -> 'orientation at flood curve raster'
+        {'boolean slope >30% raster' 'orientation at flood curve raster'}  -> 'toe orientation raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_40 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'data on rocks and geology' 'polygons of geological formations'} -> 'rock weight raster'   
+        {'boolean river raster' 'orientation at flood curve raster'} -> 'angle at flood curve raster' 
+        {'angle at flood curve raster' 'data on weights given angle'} -> 'angle weight raster' 
+        {'angle weight raster' 'rock weight raster'} -> 'toe weight raster' 
+        }
+        
+        # [5] edges
+        subgraph cluster_40 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'landslide history data' -> 'average size of landslides'
+        'boolean river raster'  -> 'polygon riparian areas'
+        {'landslide history data' 'polygon riparian areas'} -> 'j-th ratio of landslide count'
+        }
+
+        # [5] edges
+        subgraph cluster_40 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'toe orientation raster' 'i-th flood raster'} -> 'select flooded toes' 
+        'select flooded toes' -> 'i-th possible toe raster'
+        }
+
+
+#--------------------------------
+
+         # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: hazard rasters
+        'i-th possible toe raster'; 
+        '(i*j)-th actual landslide raster'; 
+        'i-th flood raster'; 
+        'j-th ratio of landslide count'; 
+        'toe weight raster'; 
+        'average size of landslides'; 
+        '(i*j)-th hazard raster';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: hazard rasters
+        'build-landslide function';
+        'join hazards';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges      
+        subgraph cluster_70 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'j-th ratio of landslide count' 'i-th possible toe raster' 'toe weight raster' 'average size of landslides'} -> 'build-landslide function' 
+        'build-landslide function' -> '(i*j)-th actual landslide raster'
+        {'i-th flood raster''(i*j)-th actual landslide raster'} -> 'join hazards' 
+        'join hazards' -> '(i*j)-th hazard raster' 
+        }
+             
+        }
+        ")
+
+name_1100
+
+```
+
+## Consolidated modules - asset module and aggregation module (w/o hazard rasters)
+
+```{r, results="asis"}
+
+name_1200 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey, rankdir = LR]
+
+#---------------------------------------
+
+
+     # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Asset module: value rasters
+        'k-th HPP asset raster' 
+        'k-th HPP revenue raster' 
+        'road asset raster' 
+        'LULC raster' 
+        'boolean settlement raster' 
+        'boolean farmland raster' 
+        'k-th settlement asset raster' 
+        'farmland asset raster';
+        'k-th points of HW and PH locations'
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Asset module: value rasters
+        'polygons of HPPs lease areas' 
+        'data on location of HW and PH' 
+        'data on unit cost per MW' 
+        'data on maximum revenue per MW' 
+        'boolean road raster' 
+        'data on unit cost per km' 
+        'Sentinel data' 
+        'data on unit cost and HH density' 
+        'data on farm gate price and crop type';
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }        
+        
+
+        # [5] edges
+        subgraph cluster_50 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'polygons of HPPs lease areas' 'data on location of HW and PH'} -> 'k-th points of HW and PH locations'
+        {'data on unit cost per MW'  'k-th points of HW and PH locations'} -> 'k-th HPP asset raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_50 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'data on maximum revenue per MW' 'k-th points of HW and PH locations'} -> 'k-th HPP revenue raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_50 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'data on unit cost per km' 'boolean road raster'} -> 'road asset raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_50 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Sentinel data' -> 'LULC raster'
+        'LULC raster' -> 'boolean settlement raster'
+        {'boolean settlement raster' 'data on unit cost and HH density'} -> 'k-th settlement asset raster'
+        'k-th settlement asset raster'
+        }
+        
+        # [5] edges
+        subgraph cluster_50 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'LULC raster' -> 'boolean farmland raster' #15
+        {'boolean farmland raster' 'data on farm gate price and crop type'} -> 'farmland asset raster'
+        'farmland asset raster'
+        }
+
+#------------------------
+
+  # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: PAE and MDD
+        'HPP PAE';
+        'road PAE'; 
+        'settlement PAE';
+        'farmland PAE'; '(i*j*k)-th HPP MDD';
+        '(i*j)-th road MDD';
+        '(i*j*k)-th settlement MDD';
+        '(i*j)-th farmland MDD';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: PAE and MDD        
+        'set deterministic PAE';
+        'parameterise stochastic MDD';
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: PAE and MDD        
+        'asset valuation data';
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }         
+        
+        # [5] edges
+        subgraph cluster_60 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'asset valuation data'
+        }
+        
+        # [5] edges
+        subgraph cluster_60 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'asset valuation data' -> 'set deterministic PAE' 
+        'set deterministic PAE' -> {'HPP PAE' 'road PAE' 'settlement PAE' 'farmland PAE'}
+        }
+        
+        # [5] edges 
+        subgraph cluster_60 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'asset valuation data' -> 'parameterise stochastic MDD'
+        'parameterise stochastic MDD' -> {'(i*j*k)-th HPP MDD' '(i*j)-th road MDD' '(i*j*k)-th settlement MDD' '(i*j)-th farmland MDD'}
+        }      
+
+#---------------------
+
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module: hazard rasters
+        '(i*j)-th hazard raster';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; '(i*j)-th hazard raster'
+        }
+        
+        # [5] edges      
+        subgraph cluster_70 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        '(i*j)-th hazard raster' 
+        }
+        
+#------------------------------
+
+ # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module - HPP
+        '(i*j)-th hazard raster';
+        'k-th HPP asset raster';
+        '(i*j*k)-th HPP exposure raster';
+        '(i*j*k)-th HPP damaged exposure raster'; 
+        '(i*j*k)-th direct damages to HPP'; 
+        '(i*j*k)-th indirect damages to HPP';
+        'HPP PAE';
+        'k-th HPP revenue raster';
+        '(i*j*k)-th HPP MDD';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        # Aggregation module - HPP
+        'subset and conditional on MDD'
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph cluster_80 {
+        rank = same; '(i*j*k)-th indirect damages to HPP' '(i*j*k)-th direct damages to HPP'
+        }
+        
+        # [5] edges
+        subgraph cluster_80 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'k-th HPP asset raster' '(i*j)-th hazard raster'} -> '(i*j*k)-th HPP exposure raster'
+        {'HPP PAE' '(i*j*k)-th HPP exposure raster'} -> '(i*j*k)-th HPP damaged exposure raster'
+        {'(i*j*k)-th HPP MDD' '(i*j*k)-th HPP damaged exposure raster'} -> '(i*j*k)-th direct damages to HPP'
+        {'(i*j*k)-th HPP MDD' '(i*j*k)-th HPP damaged exposure raster' 'k-th HPP revenue raster'} -> 'subset and conditional on MDD' 
+        'subset and conditional on MDD' -> '(i*j*k)-th indirect damages to HPP' 
+        }
+
+# ------------------------------
+
+ # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module - road
+        '(i*j)-th hazard raster';
+        '(i*j)-th road exposure raster'; 
+        '(i*j)-th road damaged exposure raster';
+        '(i*j)-th mean road MDD';
+        '(i*j)-th direct damages to road'; 
+        '(i*j)-th indirect damages to road';
+        'road asset raster';
+        'road PAE';
+        '(i*j)-th road MDD';
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'data on (1) duration road closure and (2) customs revenues';        
+
+
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph cluster_90 {
+        rank = same; '(i*j)-th indirect damages to road' '(i*j)-th direct damages to road'
+        }
+        
+        # [5] edges
+        subgraph cluster_90 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'road asset raster' '(i*j)-th hazard raster'} -> '(i*j)-th road exposure raster' # 17b
+        {'road PAE' '(i*j)-th road exposure raster'} -> '(i*j)-th road damaged exposure raster'  #17b
+        {'(i*j)-th road MDD' '(i*j)-th road damaged exposure raster'} -> '(i*j)-th direct damages to road' #17b
+        {'(i*j)-th road MDD'} -> '(i*j)-th mean road MDD' #17b
+        {'(i*j)-th mean road MDD' 'data on (1) duration road closure and (2) customs revenues'} -> '(i*j)-th indirect damages to road' # 17b
+        }
+
+
+#---------------------
+# [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        ## Aggregation module - settlement
+        '(i*j)-th hazard raster'        
+        '(i*j*k)-th settlement exposure raster';  
+        '(i*j*k)-th settlement damaged exposure raster';
+        '(i*j*k)-th direct damages to settlement'; 
+        '(i*j)-th indirect damages to settlement';
+        'k-th settlement asset raster';
+        'settlement PAE';
+        '(i*j)-th mean road MDD';
+        '(i*j*k)-th settlement MDD'
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'data on road-related income';        
+
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph cluster_100 {
+        rank = same; '(i*j*k)-th direct damages to settlement' '(i*j)-th indirect damages to settlement';
+        }
+        
+        # [5] edges
+        subgraph cluster_100 {
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'k-th settlement asset raster' '(i*j)-th hazard raster'} -> '(i*j*k)-th settlement exposure raster' # 17b
+        {'settlement PAE' '(i*j*k)-th settlement exposure raster'} -> '(i*j*k)-th settlement damaged exposure raster'  #17b
+        {'(i*j*k)-th settlement MDD' '(i*j*k)-th settlement damaged exposure raster'} -> '(i*j*k)-th direct damages to settlement' #17b
+        {'(i*j)-th mean road MDD' 'data on road-related income'} -> '(i*j)-th indirect damages to settlement' # 17b
+        }
+ 
+#------------------------------------------
+
+# [1] intermediary data / output data
+      node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+      ## Aggregation module - farmland
+      '(i*j)-th hazard raster'        
+      '(i*j)-th farmland exposure raster';  
+      '(i*j)-th farmland damaged exposure raster';
+      '(i*j)-th direct damages to farmland';
+      'farmland asset raster';
+      '(i*j)-th hazard raster';
+      'farmland PAE';
+      '(i*j)-th farmland MDD';
+      
+      # [3] operations                
+      node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+      
+      # [7] input data
+      node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+      
+      # [6] title names
+      node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+      
+      # [4] sort or separate
+      subgraph cluster_110 {
+      rank = same; '(i*j)-th direct damages to farmland'
+      }
+      
+      # [5] edges
+      subgraph cluster_110 {
+      edge [color = grey, arrowhead = vee, arrowtail = none]
+      {'farmland asset raster' '(i*j)-th hazard raster'} -> '(i*j)-th farmland exposure raster' 
+      {'farmland PAE' '(i*j)-th farmland exposure raster'} -> '(i*j)-th farmland damaged exposure raster' 
+      {'(i*j)-th farmland MDD' '(i*j)-th farmland damaged exposure raster'} -> '(i*j)-th direct damages to farmland'
+      }
+             
+        }
+        ")
+
+name_1200
+
+```
+
+# Methods: All papers and thesis
+
+## Overview methodology
+```{r}
+name_000 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] data not present in previous stages / response in general
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Qualitative primary data'; 
+        'Quantitative primary data';
+        'Qualitative secondary data'; 
+        'Quantitative secondary data'        
+        
+         # [2] data present in next stage / final output
+        node [color = orange, shape = triangle, style = filled, fillcolor= OldLace, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Results'        
+        
+        # [3] operations  / conditions or questions                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Data collection, using: '
+        'Interviews'
+        'Literature review'
+        'Other sources'
+        'Model design, including: '
+        'Characteristics of hazards underlying flood risk in Nepal'
+        'Variables quantifying flood risk'
+        'Modelling'
+        
+        # [7] data from previous stages  / response in model
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        'Methodology'
+   
+        # [4] sort or separate
+        subgraph {
+        rank = same;
+        }
+
+        # [5] edges      
+        subgraph cluster_1 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Methodology'
+        }
+        
+        # [5] edges      
+        subgraph cluster_2 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Methodology' -> 'Data collection, using: '        
+        'Data collection, using: ' -> {'Interviews' 'Literature review' 'Other sources'}
+        'Interviews' -> {'Qualitative primary data' 'Quantitative primary data'}
+        'Literature review' -> {'Qualitative secondary data' 'Quantitative secondary data'}
+        'Other sources' -> 'Quantitative secondary data'
+        }
+        
+        # [5] edges      
+        subgraph cluster_3 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'Quantitative primary data' 'Qualitative primary data' 'Qualitative secondary data' 'Quantitative secondary data'} -> 'Model design, including: '
+'Model design, including: ' -> {'Characteristics of hazards underlying flood risk in Nepal' 'Variables quantifying flood risk'}
+        }        
+        
+        # [5] edges      
+        subgraph cluster_4 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'Characteristics of hazards underlying flood risk in Nepal' 'Variables quantifying flood risk'} -> 'Modelling'
+        } 
+        
+        # [5] edges      
+        subgraph cluster_4 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Modelling' -> 'Results'
+        } 
+        
+        }
+        
+        ")
+
+name_000
+
+#WRITE_AS_SVG(name_000,"000.svg")
+
+```
+
+
+## Characteristics of hazards underlying flood risk
+```{r}
+
+name_010 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] data not present in previous stages / response in general
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+         # [2] data present in next stage / final output
+        node [color = orange, shape = triangle, style = filled, fillcolor= OldLace, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Flood-related hazards in model'        
+        
+        # [3] operations  / conditions or questions                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Triggering mechanisms?'; 
+        'Surrounding area?'; 
+        'Timing?'; 
+        'Hazards cascading from floods?'
+
+        # [7] data from previous stages  / response in model
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Rainfall, GLOF, LDOF, sediment accumulation'; 'Riperian areas'; 'Flash floods all year round'; 'Flood-induced landslides'         
+
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        'Characteristics of hazards underlying flood risk'
+   
+        # [4] sort or separate
+        subgraph {
+        rank = same;
+        }
+    
+        # [5] edges      
+        subgraph cluster { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Characteristics of hazards underlying flood risk' -> {'Triggering mechanisms?'; 'Surrounding area?'; 'Timing?'; 'Hazards cascading from floods?'}
+        'Triggering mechanisms?' -> 'Rainfall, GLOF, LDOF, sediment accumulation'
+        'Surrounding area?' -> 'Riperian areas'
+        'Timing?' -> 'Flash floods all year round'
+        'Hazards cascading from floods?' -> 'Flood-induced landslides'
+        {'Rainfall, GLOF, LDOF, sediment accumulation'; 'Riperian areas'; 'Flash floods all year round'; 'Flood-induced landslides'} -> 'Flood-related hazards in model'
+        }
+        
+        }
+        
+        ")
+
+name_010
+#WRITE_AS_SVG(name_010,"010.svg")
+```
+
+## Supporting elements to livelihoods
+
+```{r}
+name_020 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] data not present in previous stages / response in general
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Elements supporting livelihoods' 
+        'Vulnerable supporting elements are assets'
+        'Vulnerable supporting elements are not assets'
+        
+         # [2] data present in next stage / final output
+        node [color = orange, shape = triangle, style = filled, fillcolor= OldLace, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [3] operations  / conditions or questions                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Whose livelihoods?'
+        'Which supporting elements?'
+        'If elements vulnerable to flood risk'
+        'Can be valued in monetary terms and have a physical existence?'
+        
+        # [7] data from previous stages  / response in model
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Flood-related hazards in model'        
+
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        'Variables quantifying flood risk'
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 'Flood-related hazards in model' 'If elements vulnerable to flood risk'
+        }
+
+         # [5] edges      
+        subgraph cluster_00 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Variables quantifying flood risk'
+        }
+
+        # [5] edges      
+        subgraph cluster_01 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+'Variables quantifying flood risk' ->   {'Whose livelihoods?' 'Which supporting elements?'}      
+{'Whose livelihoods?' 'Which supporting elements?'} -> 'Elements supporting livelihoods' 
+        'Elements supporting livelihoods' -> 'If elements vulnerable to flood risk'
+        }
+
+        # [5] edges      
+        subgraph cluster_02 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Flood-related hazards in model' -> 'If elements vulnerable to flood risk'
+        'If elements vulnerable to flood risk' -> 'Can be valued in monetary terms and have a physical existence?'
+        'Can be valued in monetary terms and have a physical existence?' -> {'Vulnerable supporting elements are assets' 'Vulnerable supporting elements are not assets'}
+        }
+
+        }
+        
+        ")
+
+name_020
+
+#WRITE_AS_SVG(name_020,"020.svg")
+
+```
+
+# Methods by paper
+
+## LULC paper: Methods
+
+```{r}
+
+
+name_400 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] data not present in previous stages / response in general
+        node [color = gray, shape = oval, style = filled, fillcolor= gray, fontname = Helvetica, fixedsize = false, fontsize = 14, fontcolor = white]
+        'Sentinel-2 Level-1A'
+        'Ground control points (GCPs)'
+        'Topographical thresholds'
+        
+        # [2] data present in next stage / final output
+        node [color = gray, shape = triangle, style = filled, fillcolor= gray, fontname = Helvetica, fixedsize = false, fontsize = 14, fontcolor = white]
+        
+        # [3] operations  / conditions or questions                
+        node [color = gray, shape = diamond, style = filled, fillcolor= gray, fontname = Helvetica, fixedsize = false, fontsize = 14, fontcolor = white]
+        
+        # [7] data from previous stages  / response in model
+        node [color = gray, shape = box, style = filled, fillcolor= gray, fontname = Helvetica, fixedsize = false, fontsize = 14, fontcolor = white]
+        'Cloud correction'
+        'Median for each band'
+        'Training GCPs'
+        'Classification'
+        'Classification and Regression Tree'
+        'Random Forest'
+        'Max Entropy'
+        'Validation GCPs'
+        'Validation'
+        'Confusion matrices (n = 3)'
+        'Confusion matrices by topographical category (n = 18)'
+        'Kappa coefficient and Kappa standard deviation'
+        'Producer, user, and overall accuracy'
+        'Selection of map of highest accuracy'
+        'Producer and user accuracy'
+        'General linear models'
+        'Variables associated with producer and user accuracy'
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= gray, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = white]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges      
+        subgraph cluster1 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Sentinel-2 Level-1A'                     -> 'Cloud correction'
+        'Cloud correction'                        -> 'Median for each band' 
+        'Ground control points (GCPs)'                                    -> {'Training GCPs' 'Validation GCPs'}
+        {'Median for each band' 'Training GCPs'}  -> 'Classification'
+        'Classification'                          -> {'Classification and Regression Tree''Random Forest''Max Entropy'}
+        {'Classification and Regression Tree''Random Forest' 'Max Entropy' 'Validation GCPs'}  -> {Validation}
+        
+        
+        }
+        
+        # [5] edges      
+        subgraph cluster2 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Validation'                              -> {'Confusion matrices (n = 3)' 'Confusion matrices by topographical category (n = 18)'}        
+        'Confusion matrices (n = 3)'              -> {'Kappa coefficient and Kappa standard deviation' 'Producer, user, and overall accuracy'}
+        {'Kappa coefficient and Kappa standard deviation' 'Producer, user, and overall accuracy'} -> 'Selection of map of highest accuracy'
+        {'Confusion matrices by topographical category (n = 18)''Topographical thresholds'} -> 'Producer and user accuracy'
+        'Producer and user accuracy'              -> 'General linear models'
+        'General linear models'                   -> 'Variables associated with producer and user accuracy'
+        }
+        
+        }
+        
+        ")
+
+name_400
+
+#WRITE_AS_SVG(name_400, "to LULC paper.svg")
+```
+
+## Vulnerability paper: Supporting elements to livelihoods vulnerable to flood risk
+```{r}
+
+name_300 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] data not present in previous stages / response in general
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Vulnerable supporting elements are assets'
+        'Vulnerable supporting elements are not assets'        
+        
+         # [2] data present in next stage / final output
+        node [color = orange, shape = triangle, style = filled, fillcolor= OldLace, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Area size of farmland'
+        'Area size of settlement'
+        'Number of households'
+        'Hotspots of flood risk'        
+        
+        # [3] operations  / conditions or questions                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Which elements are considered in model?' 
+
+        # [7] data from previous stages  / response in model
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Farmland'
+        'Settlement'
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        'Supporting elements to livelihoods vulnerable to flood risk'
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same;
+        }
+
+      # [5] edges      
+        subgraph cluster_01 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Supporting elements to livelihoods vulnerable to flood risk'
+        }
+        
+        # [5] edges      
+        subgraph cluster_02 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Supporting elements to livelihoods vulnerable to flood risk' -> {'Vulnerable supporting elements are assets'  'Vulnerable supporting elements are not assets'}
+        {'Vulnerable supporting elements are assets'  'Vulnerable supporting elements are not assets'} ->  'Which elements are considered in model?' 
+        }
+
+        # [5] edges      
+        subgraph cluster_03 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Which elements are considered in model?' -> {'Farmland' 'Settlement'}
+        'Farmland' -> 'Area size of farmland'
+        'Settlement' -> {'Area size of settlement' 'Number of households'}
+        {'Area size of farmland''Area size of settlement'} -> 'Hotspots of flood risk'
+        }
+        
+        }
+        
+        ")
+
+name_300
+#WRITE_AS_SVG(name_300,"300.svg")
+```
+
+## Economic damages paper: Economic damages to elements supporting livelihoods
+
+```{r}
+name_200 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] data not present in previous stages / response in general
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Vulnerable supporting elements are assets'
+        'Vulnerable supporting elements are not assets'
+        'Direct tangible consequences (direct damages)'
+        'Indirect tangible consequences (indirect damages)'
+        'Direct intangible consequences'
+        'Indirect intangible consequences'
+        
+        
+        # [2] data present in next stage / final output
+        node [color = orange, shape = triangle, style = filled, fillcolor= OldLace, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Economic damages'
+       
+        
+        # [3] operations  / conditions or questions                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'If affected by flood-related hazards' 
+        'Which elements considered in model?'
+        'Which considered in model?'
+
+        # [7] data from previous stages  / response in model
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Direct damages to: HPP, road, settlement, farmland'
+        'Indirect damages for: HPP, customs, local population'
+        'Flood-related hazards in model'
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'Economic damages to elements supporting livelihoods'        
+
+        # [4] sort or separate
+        subgraph {
+        rank = same; 'Flood-related hazards in model'; 'If affected by flood-related hazards'
+        }
+
+        # [5] edges      
+        subgraph cluster_01 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Economic damages to elements supporting livelihoods'
+        }
+
+        
+        # [5] edges      
+        subgraph cluster_02 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Economic damages to elements supporting livelihoods' -> {'Vulnerable supporting elements are assets' 'Vulnerable supporting elements are not assets'}
+        {'Vulnerable supporting elements are assets' 'Vulnerable supporting elements are not assets'} -> 'Which elements considered in model?'
+        {'Which elements considered in model?' 'Flood-related hazards in model'} -> 'If affected by flood-related hazards'
+        }
+
+        # [5] edges      
+        subgraph cluster_03 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'If affected by flood-related hazards'} -> {'Direct tangible consequences (direct damages)' 'Indirect tangible consequences (indirect damages)' 'Direct intangible consequences' 'Indirect intangible consequences'}
+        {'Direct tangible consequences (direct damages)' 'Indirect tangible consequences (indirect damages)''Direct intangible consequences' 'Indirect intangible consequences'} -> 'Which considered in model?'
+        }
+
+        # [5] edges      
+        subgraph cluster_04 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'Which considered in model?'} -> 'Direct damages to: HPP, road, settlement, farmland'
+        {'Which considered in model?'} -> 'Indirect damages for: HPP, customs, local population'
+        {'Direct damages to: HPP, road, settlement, farmland' 'Indirect damages for: HPP, customs, local population'} -> 'Economic damages'
+        }
+
+        }
+        
+        ")
+
+name_200
+
+#WRITE_AS_SVG(name_200,"nice.svg")
+
+```
+

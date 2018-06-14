@@ -1,0 +1,4085 @@
+---
+title: "Model documentation"
+author: "Marie Delalay"
+date: '2018'
+output:
+  word_document:
+    highlight: zenburn
+    reference_docx: template.docx
+    toc: yes
+  html_document:
+    toc: yes
+---
+
+# For the new user of this script
+
+Before anything else, you are advised to read carefully this section. 
+
+You might want to look at these pages: 
+
+- for R packages, http://r-pkgs.had.co.nz/r.html
+- for global options and chunk options, https://yihui.name/knitr/options/
+- for R Elements of Style, http://style.tidyverse.org/ 
+
+So, click above or use this function below:
+
+```{r open_web}
+#shell.exec("www.google.com")
+```
+
+We set global options to avoid repeating them in the code chunks. 
+
+```{r first_options}
+rm(list = ls())
+set.seed(1)
+options("scipen" = 999, "digits"= 4)
+```
+
+We set knitr options, again to avoid repeating them in the code chunks. 
+
+```{r rmd_options}
+knitr::opts_chunk$set(df_print = "kable", collapse = TRUE, # Global option.
+                      fig_caption = "yes", out.width="80%", fig.keep = "all", fig.align="center", # Figure options.
+                      eval = TRUE, error = FALSE, # Evaluation. error: is knit interrupted if the chunks have error?
+                      echo = TRUE, results = "asis", include = TRUE, warning = FALSE, message=FALSE, dpi = 300) # Display. Displayed by default only (1) tables and (2) plots. echo: is the chunk printed?
+```
+
+We install libraries and load packages. 
+
+```{r options}
+x <- c("actuar", "car", "devtools", "DiagrammeR", "dplyr", "fitdistrplus", 
+       "ggmap", "ggplot2", "gtools", "grid",
+       "knitr", "lattice", "lmomRFA", "logspline", "lubridate", "maptools",
+       "raster",  "rasterVis", "readxl",  "reshape", "reshape2", "rgdal", "rgeos", "roxygen2", 
+       "SDMTools", "sp", "splitstackshape", "stats", "stplanr","stringr" , "svDialogs", 
+       "testthat", "tidyr", "tidyverse", "vcd", "xtable")
+
+y <- which(!x %in% rownames (installed.packages()))
+if (length(y) >0) {install.packages(x[y])}
+z <- lapply(x, library, character.only = TRUE, quietly = TRUE) 
+
+rasterOptions(progress="text")
+```
+
+The following path assignement ensures that R looks at the right folders.
+
+Here are instructions on how to set up **your_absolute_path** folder:
+
+- First, **your_absolute_path** must be changed in the chunk below
+- In the **your_absolute_path** folder you must have at least:
+    - The files in https://github.com/mdelalay/Cloud-FRAM
+    - The .R and .Rmd files in **your_absolute_path**/R in https://github.com/mdelalay/Cloud-FRAM/R
+    - The input data in **your_absolute_path**/Data_Input from the Dropbox https://www.dropbox.com/sh/zogfjvimvxl5us9/AAB2fvb2jQL77BTu6K2i63Q2a?dl=0 
+- In addition, you can copy in the folders **your_absolute_path**/Data_OutputR,  **your_absolute_path**/ResultR, and **your_absolute_path**/man from the Dropbox
+
+In the unfortunate case where the directory in **absolute_path** is new despite the listed instructions, the following chunk generates the skeleton of a R Package. The purpose is to generate documentation of the built-in functions (see below). 
+
+```{r}
+absolute_path <- "C:/Users/mdela/Dropbox/Prof/NUS/Projects/Modelling/FRAM" # **your_abslolute_path**
+if (!file.exists(absolute_path)) printdevtools::create(absolute_path)
+```
+
+We source the R file that contains the R functions. 
+
+```{r}
+setwd(paste0(absolute_path, "/R"))
+source("11_documentation_background.R", local=TRUE)
+```
+
+We create a package to document the built-in functions (i.e., to be able to use the **?** syntax). This creates **your_absolute_path**/man.
+
+```{r}
+document(absolute_path)
+```
+
+Here is the description of indicators of the following code chunk as well as how the code is evaluated and knitted:
+
+1. By default, this script is read and knitted without changing the output data (which is in **your_absolute_path**/Data_OutputR) and results (which is in **your_absolute_path**/ResultR), because indicators of what to plot and which code parts to run are set by default to `r FALSE`. These indicators are set to `r TRUE` the following ways and if the following conditions are met: 
+    - by R if the folder **your_absolute_path**/Data_OutputR or the folder **your_absolute_path**/ResultR does not exist, or
+    - by you the user in the coming code chunk named **indicators**.
+2. If indicators of what to plot and which code parts to run are set to `r TRUE`:
+    - Output and results are overwritten and
+    - This script takes about 4-5 hours (to be blamed on the developer of this script) to be evaluated,i.e., to run all chunks with 1000 simulations (which you might have to change in the code chunk below) and 6 combinations of scenarios.
+3. Always switch back to indicators' default values (i.e., back to `r FALSE`) when exiting the R project.
+
+We set the indicators and directories. 
+
+```{r indicators}
+whattodo       <- FALSE # time-consuming operations if set to TRUE
+whattoplot     <- FALSE # plots (can also be time-consuming if set to TRUE)
+nsim           <- 10
+
+input_path  <- paste0(absolute_path, "/Data_Input")
+create_output_path <- CREATE_AND_NAME_FOLDER(absolute_path, "Data_OutputR")
+create_result_path <- CREATE_AND_NAME_FOLDER(absolute_path, "ResultR")
+
+output_path <- create_output_path[[1]]
+result_path <- create_result_path[[1]]
+boolean_v <- any(c(create_output_path[[2]], create_result_path[[2]]))
+
+if(boolean_v) {
+  whattodo <- TRUE; whattoplot <- TRUE
+} 
+```
+
+We define parameters.
+
+```{r parameters}
+expo_scrio_v         <- c("low", "high")
+elements_at_risk_v   <- c("HPP", "road", "settlement", "farmland")
+side_length          <- 30
+qtles_v              <- c(0.50, 0.990, 0.9990) # Return period of 10, 100, and 1000
+rp_v                 <- round(1 / (1 - qtles_v),0)
+buffer_degree        <- 0.008
+```
+
+Rasters in the model have typically a resolution of 1 arc-second, which can be approximated to squared grid cells, or pixels, with side-length equal to `r round(side_length,0)` m.
+
+These two Coordinate Reference Systems (CRSs) are used: 
+
+- a Geographic Coordinate System GCS_WGS_1984 (WKID: 4326); and 
+- a Projected Coordinate System (in meter) WGS_1984_UTM_Zone_45N, (WKID: 32645). 
+
+We work on different spatial extents, which are codified (e.g., see names if input and output data files) as follows:
+
+- E01: extent of the study area
+- E02: extent of the river network in the study area
+- E99: other extents
+
+We import to R input data and intermediary data. 
+
+```{r input_data}
+options(warn = -1)
+
+# from Master_table.xlsx ------------------------
+
+GPS_xls_df      <-   READ_EXCEL("D002_GPS.ID", input_path) 
+SECT_xls_df     <-   READ_EXCEL("D003_SECT.ID", input_path) 
+RCH_xls_df      <-   READ_EXCEL("D004_RCH.ID", input_path) 
+GPX_xls_df      <-   READ_EXCEL("D005_GPX.ID", input_path) 
+
+IFMT_xls_df     <-   READ_EXCEL("D032_IFMT.ID", input_path)
+ANAL_xls_df     <-   READ_EXCEL("D037_ANAL.ID", input_path)
+HPP_xls_df      <-   READ_EXCEL("D041_HPP.ID", input_path)
+SHPP_xls_df     <-   READ_EXCEL("D042_SHPP.ID", input_path)
+ASS_xls_df      <-   READ_EXCEL("D043_ASS.ID", input_path) 
+VDC_xls_df      <-   READ_EXCEL("D045_VDC.ID", input_path) 
+FML_xls_df      <-   READ_EXCEL("D046_FML.ID", input_path)
+DISC_xls_df     <-   READ_EXCEL("D047_DISC.ID", input_path)
+
+GEOL_xls_df     <-   READ_EXCEL("D053_GEOL.ID", input_path)
+DAT1_xls_df     <-   READ_EXCEL("D073_DAT1.ID", input_path)
+DAT2_xls_df     <-   READ_EXCEL("D074_DAT2.ID", input_path)
+LURE_xls_df     <-   READ_EXCEL("D082_LURE.ID", input_path)
+LUDA_xls_df     <-   READ_EXCEL("D083_LUDA.ID", input_path)
+REGR_xls_df     <-   READ_EXCEL("D084_REGR.ID", input_path)
+SPLT_xls_df     <-   READ_EXCEL("D085_SPLT.ID", input_path)
+COMP_xls_df     <-   READ_EXCEL("D086_COMP.ID", input_path)
+GCP_xls_df      <-   READ_EXCEL("D087_GCP.ID", input_path)
+
+# Input data: shapefiles or rasters --------------
+
+LULC_r              <- OPEN_R  (input_path, "E99_LULC_r_ArcGIS") 
+VDC_raw_shp         <- OPEN_SHP(input_path, "E99_KoshiBasin_VDC_pgshp_ICIMOD") 
+msrmts_raw_shp      <- OPEN_SHP(input_path, "E99_LULC_FieldWork_ptshp_ArcGIS")  
+districts_shp       <- OPEN_SHP(input_path, "E99_Nepal_districts_pgshp_ICIMOD") 
+geol_shp            <- OPEN_SHP(input_path, "E99_Nepal_geology_pgshp_ICIMOD") 
+ldsd_shp            <- OPEN_SHP(input_path, "E99_Nepal_landslides_pgshp_ICIMOD") 
+boundary_rivers_shp <- OPEN_SHP(input_path, "E99_river_reaches_pgshp_ArcGIS") 
+road_shp            <- OPEN_SHP(input_path, "E99_road_lshp_ArcGIS") 
+slope_r             <- OPEN_R  (input_path, "E99_slope_r_ArcGIS")
+aspect_r            <- OPEN_R  (input_path, "E99_aspect_r_ArcGIS")
+
+options(warn = 0)
+```
+
+Some input and intermediary data require either some steps for import to R or explanation on their derivation. Therefore, they are imported in chunks further sections while the directories are provided here. 
+
+```{r input_path}
+# Paths for hydrological analysis, LULC, DHM, and figures
+hydroanalysis_path <- paste0(input_path, "/0_Hydrological analysis on ArcGIS")
+inputDHM_path <- paste0(input_path,"/0_DHM")
+LULC_path <- paste0(input_path, "/0_LULC raster")
+figure_path <- paste0(input_path, "/0_Figures")
+
+# Original DEMs - path
+aster_path          <- paste0(input_path, "/0_ASTER_EExplorer/") 
+srtm_path           <- paste0(input_path, "/0_SRTM_EExplorer/") 
+```
+
+The remainder of this model documentation is structured follows:
+
+1. Hazard module
+2. Asset module
+3. Aggregation module
+4. Vulnerability module
+5. Results
+6. Check of outputs to papers
+7. Appendices
+
+# Hazad module - data preparation
+
+## Unfilled DEM raster
+
+Input data are retrieved from these directories:
+
+```{r results = "hide"}
+srtm_path
+aster_path
+```
+
+The few void pixels of the SRTM 1-arc second are replaced with elevation values of the ASTER 1-arc second.
+
+```{r time_consuming_1} 
+if (whattodo) {
+  
+  path <- srtm_path
+  x1 <- list.files(path, full.names = TRUE, pattern="\\.tif$")
+  srtm_1arc_r <- raster(x1[1])
+  
+  for (i in 2:length(x1)){
+    srtm_1arc_r <- merge(srtm_1arc_r, raster(x1[i]))
+  }
+  
+  srtm_1arc_r[srtm_1arc_r[]<0] <- 0   
+  
+  path <- aster_path
+  x1 <- list.files(path, full.names = TRUE, pattern="\\.tif$")
+  aster_1arc_r <- raster(x1[1])
+  
+  for (i in 2:length(x1)){
+    aster_1arc_r <- merge(aster_1arc_r, raster(x1[i]))
+  }
+  
+  aster_1arc_r[aster_1arc_r[]<0] <- 0  
+  
+  FIX_PROJ_R(aster_1arc_r,srtm_1arc_r) # No warning: we are all good!
+  srtm_1arc_r[is.na(srtm_1arc_r)] <- aster_1arc_r[is.na(srtm_1arc_r)] 
+  srtm_1arc_r <- SAVEandOPEN_R(srtm_1arc_r, output_path, "E99_SRTM_r_OutR")
+}
+
+srtm_1arc_r <- OPEN_R(output_path, "E99_SRTM_r_OutR")
+```
+
+## Polyline of rivers (ArcGIS)
+
+Input data are retrieved from this directory:
+
+```{r results = "hide"}
+hydroanalysis_path
+```
+
+The sources of information for the derivation of the river raster from the DEM are (1) the ArcGIS website ([click here for link](http://pro.arcgis.com/en/pro-app/tool-reference/spatial-analyst/how-fill-works.htm)) and (2) Saurav Pradhananga, hydro specialist at ICIMOD. We have performed the following steps on ArcGIS for deriving the river network:
+
+1. First, open ArcGIS.
+
+2. Arctoolbox - Spatial Analyst - Fill
+    - Input surface raster: the SRTM raster, which is the output of the chunks above, as reminder: 
+    
+```{r results = "hide"}
+srtm_1arc_r
+```
+
+2. Cont'd
+    - Output: fill.tif (Go to the tab data, export data, as .tif. Saving this file is necessary for consistent CRSs in the chunks below).
+    - The output is therefore a Digital Elevation Model (DEM) derived from the SRTM at 1 arc-second of the previous section, where sinks and peaks are removed. 
+    - Note that if the study area is a coastal area, an extra step is needed here to mask the Filled DEM such that value of elevation in the sea are NA instead of 0.  
+    - The saved fill.tif is imported to R in the following chunk:
+    
+```{r}
+filled_E99_dem_r <- OPEN_R(hydroanalysis_path, "E99_fill_r_ArcGIS")
+```
+
+3. Arctoolbox - Spatial Analyst - Flow Direction
+    - Input surface raster: fill.tif 
+    - Output              : direction
+    
+```{r results = "hide"}
+OPEN_R(hydroanalysis_path, "E99_direction_r_ArcGIS")
+```
+
+4. Arctoolbox - Spatial Analyst - Flow Accumulation
+    - Input surface raster: direction
+    - Output              : accumulation
+
+5. Arctoolbox - Conditional - Con
+    - Input conditional raster: accumulation
+    - Expression              : VALUE>60000 (the smaller, the more river orders are displayed)
+    - Input true raster or constant value
+    - Output                  : rivers.tif (Go data, export data, as .tif. Necessary for consistent CRS).
+    - The output is therefore a boolean raster that indicates the presence of water. 
+    - The data is imported to R in the following chunk:
+    
+```{r}
+bool_r_r <- OPEN_R(hydroanalysis_path,"E99_rivers_r_ArcGIS")
+```
+
+6. Arctoolbox - Spatial Analyst - Raster to Polyline
+    - Input: rivers.tif
+    - Output: rivers_shp, to export
+    - a polyline .shp file by polygonising the boolean raster of rivers.
+    - The data is imported to R in the following chunk:
+    
+```{r}
+rivers_shp <- OPEN_SHP(hydroanalysis_path,"E99_rivers_lshp_ArcGIS")
+```
+
+## Watersheds (ArcGIS)
+
+We use ArcGIS to derive watersheds as follows:
+
+1. Pour points are points slightly upstream of the confluence of rivers that represent the outlet of watersheds. They are manually defined on ArcGIS. 
+
+```{r results="hide"}
+OPEN_SHP(hydroanalysis_path, "E01_Pour_Sunkoshi_ptshp_ArcGIS")   # at Dolalghat
+OPEN_SHP(hydroanalysis_path, "E01_Pour_Balephi_ptshp_ArcGIS")    # at Balephi
+OPEN_SHP(hydroanalysis_path, "E01_Pour_Bhotekoshi_ptshp_ArcGIS") # at Bahrabise for the Bhotekoshi
+```
+
+2. Arctoolbox - Spatial Analyst - Watershed
+    - Input flow direction raster: direction.tiff
+    - Input raster or feature pour point data: pour_point_Dolalghat.shp
+    - Output: WS_XXX (raster)
+    - Optional: repeat for each pour point if subwatersheds are needed
+    
+```{r}
+WS_Bhot_r <- OPEN_R(hydroanalysis_path, "E01_Watershed_Bhotekoshi_r_ArcGIS")
+WS_Bal_r  <- OPEN_R(hydroanalysis_path, "E01_Watershed_Balephi_r_ArcGIS")
+WS_Sun_r  <- OPEN_R(hydroanalysis_path, "E01_Watershed_Sunkoshi_r_ArcGIS")
+
+# WS_Sun_r[WS_Bhot_r ==0] <- 2, WS_Sun_r[WS_Bal_r ==0]  <- 1, SAVEandOPEN_R(WS_Sun_r,hydroanalysis_path,"E01_Watershed_all_split_r_ArcGIS") 
+```
+
+3. Arctoolbox - Spatial Analyst - Raster to Polygon
+    + Input: WS_XXX
+    + Output: ws_XXX_shp, to export
+    + The output is therefore a polygon .shp file of the watershed boundaries.
+    + The data is imported to R in the following chunk:
+    
+```{r}
+WS_Sun_shp       <- OPEN_SHP(hydroanalysis_path, "E01_Watershed_Sunkoshi_pgshp_ArcGIS")
+WS_Bhot_shp      <- OPEN_SHP(hydroanalysis_path, "E01_Watershed_Bhotekoshi_pgshp_ArcGIS")
+WS_Bal_shp       <- OPEN_SHP(hydroanalysis_path, "E01_Watershed_Balephi_pgshp_ArcGIS")
+ws_dolalghat_shp <- WS_Sun_shp
+```
+
+## Study area
+
+The input data are:
+
+```{r results="hide"}
+buffer_degree 
+districts_shp 
+
+buffer_m <- 100*round(buffer_degree * 110 *1000/100,0) # 1 degree angle ~= 110 km
+FIX_PROJ_SHP(districts_shp, filled_E99_dem_r)
+```
+
+We derive the study area, which is the part of the Sunkoshi watershed at outlet at Dolalghat that is located in Nepal, with a buffer of `r round(buffer_m,0)` m because some of the boundaries are marked by rivers.
+
+```{r}
+district_SPandKV_shp <- districts_shp[districts_shp$DIST_NAME %in% c("Sindhupalchok", "Kavre"),] # This subset is needed because of further intersect North with watershed attributable to inaccurate polygons in the original data. 
+
+# Intersect:
+study_area_shp <- gIntersection(ws_dolalghat_shp, district_SPandKV_shp)
+study_area_shp <- SpatialPolygonsDataFrame(study_area_shp, data=as.data.frame(NA))
+
+# Buffer:
+options(warn=-1)
+study_area_shp <- gBuffer(study_area_shp, width=buffer_degree, byid=TRUE, quadsegs=10) # error message is because the CRS used is a geographic CRS, and not projected. Moreover, to get the ID, use: study_area_shp@polygons[[1]]@ID
+options(warn=0)
+study_area_shp <- SpatialPolygonsDataFrame(study_area_shp, data=as.data.frame(NA))
+
+# (Save and re-) open .shp file of study area boundary:
+if (whattodo) (study_area_shp <- SAVEandOPEN_SHP(study_area_shp, output_path, "E01_boundary_pgshp_OutR"))
+
+study_area_shp <- OPEN_SHP(output_path, "E01_boundary_pgshp_OutR")
+
+# We define the following extent:
+E01_crop_extent <- extent(study_area_shp)
+
+# Area size with buffer
+aa <- CALC_AREA(study_area_shp, byid_area = FALSE, unit_area = "km2")
+```
+
+We calculate the area size of some sub-watersheds of the study area and the size of the study area without the buffer of `r round(buffer_m,0)` m.
+
+```{r}
+# Intersect Sunkoshi:
+temp <- gIntersection(WS_Sun_shp, district_SPandKV_shp)
+temp <- SpatialPolygonsDataFrame(temp, data=as.data.frame(NA)) 
+WS_Sun_km2 <- CALC_AREA(temp, byid_area = FALSE, unit_area = "km2")
+
+# Intersect Bhotekoshi:
+temp <- gIntersection(WS_Bhot_shp, district_SPandKV_shp)
+temp <- SpatialPolygonsDataFrame(temp, data=as.data.frame(NA)) 
+WS_Bhot_km2 <- CALC_AREA(temp, byid_area = FALSE, unit_area = "km2")
+
+#Intersect Balephi River:
+temp <- gIntersection(WS_Bal_shp, district_SPandKV_shp)
+temp <- SpatialPolygonsDataFrame(temp, data=as.data.frame(NA)) 
+WS_Bal_km2 <- CALC_AREA(temp, byid_area = FALSE, unit_area = "km2")
+
+# Sunkoshi net
+WS_Sun_net_km2 <- WS_Sun_km2 - WS_Bhot_km2 - WS_Bal_km2
+```
+
+The resulting study area has a size of `r round(WS_Sun_km2,0)` km^2^.
+
+If plots are called, plots are rendered below.
+
+```{r time_consuming_2, echo = FALSE, results = "hide"}
+
+if (whattoplot) {
+plot(districts_shp)
+plot(ws_dolalghat_shp, add=TRUE, border="blue")
+plot(study_area_shp, add=TRUE, border="red")
+}
+
+if (whattoplot) {
+plot(srtm_1arc_r, col=rev( rainbow( 99, start=0,end=0.8 ) ))
+plot(study_area_shp, add=TRUE)
+}
+
+if (whattoplot) {
+spdf_to_df <- function(in_spatial_df) plyr::ldply(in_spatial_df@polygons, 
+                                                  function(c_poly) c_poly@Polygons[[1]]@coords %>% data.frame %>% dplyr::rename(lon = X1, lat = X2) %>% mutate(id = c_poly@ID))
+
+poly_coord <- spdf_to_df(study_area_shp)
+
+get_map(location = c(lon = mean(poly_coord$lon), lat = mean(poly_coord$lat))) %>% 
+
+ggmap() + geom_polygon(aes(lon,lat, fill = id), data = poly_coord, alpha = 0.5)
+}
+
+if (whattoplot) {
+  districts_shp %>% spdf_to_df -> districts_poly_df # same as districts_poly_df <- spdf_to_df(districts_shp)
+  get_map(location = c(lon = mean(districts_poly_df$lon), lat = mean(districts_poly_df$lat)),zoom = 6) %>% 
+    ggmap() + geom_polygon(aes(lon,lat, fill = id), data = districts_poly_df, alpha = 0.5) + theme(legend.position="none")
+}
+```
+
+## Polygons of buffered river reach IDs (R and ArcGIS) 
+
+### River reach identification (R and ArcGIS)
+
+The boolean river shapefile is clipped to the study area and split into segments.
+
+```{r}
+# Intercept rivers shp on study area
+rivers_intercept_shp <- gIntersection(rivers_shp, study_area_shp)
+rivers_intercept_shp <- SpatialLinesDataFrame(rivers_intercept_shp, data=as.data.frame(NA)) 
+# Split the river .shp file
+rivers_split_shp <- gsection(rivers_intercept_shp)
+Sect_df <- data.frame(SECT_ID = 1:length(rivers_split_shp@lines))
+rivers_split_shp <- SpatialLinesDataFrame(rivers_split_shp, data= Sect_df)
+```
+
+On ArcGIS, the ID of segments of rivers (as SECT_ID) are selected and matched manually with the ID of the river reaches (as RCH_ID) that are in scope of this work. Both the SECT_ID and the RCH_ID are returned to a table that is imported to R and shown below.
+
+```{r}
+aa <- unique(SECT_xls_df[SECT_xls_df$RCH_ID %in% 1:7, colnames(SECT_xls_df) %in% c("RCH_ID", "river_reach_name", "river_name")])
+cc <- inner_join(data.frame(RCH_ID = 1:7), aa, by = "RCH_ID")
+colnames(cc) <- c("River reach ID", "Name of river reach", "Name of river")
+final_river_reaches_df <- cc
+FMTD_KABLE(final_river_reaches_df, align_args = "l", digits_args = 0) # Defined above 
+```
+
+River segments that are not selected as per the above table are excluded.
+
+```{r}
+rivers_split_shp <- rivers_split_shp [ rivers_split_shp@data$SECT_ID %in% SECT_xls_df$SECT_ID,] 
+rivers_split_shp@data <- merge(rivers_split_shp@data, SECT_xls_df, by.x = "SECT_ID", by.y = "SECT_ID")
+```
+
+Then, segments of the same river reaches are dissolved. 
+
+```{r}
+rivers_split_diss_shp <- gLineMerge(rivers_split_shp, id = rivers_split_shp$river_reach_name) # result is of class SpatialLines
+conso_df <- as.data.frame(unique(as.data.table(rivers_split_shp@data[order(rivers_split_shp@data$SECT_ID),]), by = "river_reach_name")) # Remove all the non-unique names of river reaches
+rownames(conso_df) <- conso_df$river_reach_name # these rows need to be defined as it matches with the ID of the object of class SpatialLines
+rivers_split_diss_shp <- SpatialLinesDataFrame(rivers_split_diss_shp, data= conso_df)
+```
+
+Finally, the river reaches out of scope are removed and the .shp file is saved and reopen.
+
+```{r}
+rivers_split_shp <- rivers_split_diss_shp[rivers_split_diss_shp$in_scope == 1,]
+
+if (whattodo) (rivers_split_shp <- SAVEandOPEN_SHP(rivers_split_shp, output_path, "E02_riverssplit_lshp_OutR"))
+rivers_split_shp <- OPEN_SHP(output_path, "E02_riverssplit_lshp_OutR")
+```
+
+There are `r dim(rivers_split_shp)[1]` river reaches in scope of this model.
+
+If plots are called, plots are rendered below.
+
+```{r echo = FALSE, results = "hide"}
+if (whattoplot) {
+  plot(study_area_shp, border="red")
+  xxx <- gCentroid(rivers_split_shp, byid=TRUE)
+  plot(rivers_split_shp, add=TRUE, col="blue")
+  text(xxx, rivers_split_shp$river_reach_name, cex = 0.5)
+}
+```
+
+### River reach ID buffer raster (R and ArcGIS)
+
+We create start and end points of river reaches from polylines:
+
+```{r}
+# Extract start and end point of each polyline
+x <- rivers_split_shp
+#x should be of class "SpatialLinesDataFrame"
+point_coords_df <- data.frame(RCH_ID = rep(x$RCH_ID, each=2), S_or_E = rep(c("start", "end")))
+point_coords_df$lat <- NA
+point_coords_df$long  <- NA
+for (i in 1:nrow(x)) {
+  y <- x@lines[[i]]@Lines[[1]]@coords
+  length_coord = nrow(y)
+  point_coords_df[i*2-1,3:4] <- rev(y[1,])
+  point_coords_df[i*2,3:4] <- rev(y[length_coord,])
+}
+
+# create points of river confluence:
+rivers_points_shp <- point_coords_df
+coordinates(rivers_points_shp) = ~ long + lat
+proj4string(rivers_points_shp) = CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+```
+
+On ArcGIS, polygons of the `r dim(rivers_split_shp)[1]` river reaches of interest are drawn manually and snapped to these points of confluence of rivers:
+
+```{r results = "hide"}
+boundary_rivers_shp
+```
+
+## Slope raster (ArcGIS)
+
+These steps on ArcGIS are used to generate the slope:
+
+1. Arctoolbox - Project Raster
+    - Input: fill.tif (in Model\Data_Input\0_Hydrological analysis on ArcGIS\E99_fill_r_ArcGIS)
+    - Output coordinate system: WGS_1984_UTM_Zone_45N
+    - Resampling technique: BILINEAR
+    - Output cell size: leave empty
+    - Output: fill_reproject.tif
+    
+2. Arctoolbox - Slope (3D Analyst)
+    - Input: fill_reproject.tif
+    - Output measurement: PERCENT
+    - Output: slope_reproject.tif
+    
+3. Arctoolbox - Project Raster
+    - Input: slope_reproject.tif
+    - Output coordinate system: GCS_WGS_1984
+    - Resampling technique: BILINEAR
+    - Output cell size: leave empty
+    - Output: slope.tif
+
+4. Arctoolbox - Resample
+    - Input raster: slope.tif
+    - Resampling technique: BILINEAR
+    - Output cell size: same as layer: fill.tif
+    - Environments... Processing Extent: Snap raster: fill.tif
+    - Output: slope_degree.tif, to export
+    - The output is therefore a raster of slope in percent.
+    - The data is imported to R in the following chunk:
+    
+```{r results = "hide"}
+slope_r
+```
+
+## Aspect raster (ArcGIS)
+
+These steps on ArcGIS are used to generate the aspect:
+
+1. Arctoolbox - Project Raster
+    - Input: fill.tif
+    - Output coordinate system: WGS_1984_UTM_Zone_45N
+    - Resampling technique: BILINEAR
+    - Output cell size: leave empty
+    - Output: fill_reproject.tif
+    
+2. Arctoolbox - Aspect (3D Analyst)
+    - Input: fill_reproject.tif
+    - Output: aspect_reproject.tif
+    
+3. Arctoolbox - Project Raster
+    - Input: aspect_reproject.tif
+    - Output coordinate system: GCS_WGS_1984
+    - Resampling technique: BILINEAR
+    - Output cell size: leave empty
+    - Output: aspect.tif
+
+4. Arctoolbox - Resample
+    - Input raster: aspect.tif
+    - Resampling technique: NEAREST
+    - Output cell size: same as layer: fill.tif
+    - Environments... Processing Extent: Snap raster: fill.tif
+    - Output: aspect_export.tif, to export
+    - The data is imported to R in the following chunk:
+    
+```{r results = "hide"}
+aspect_r
+```
+
+## E02 extent
+
+See above for a description of the various extents of spatial data used in this project. 
+
+```{r results = "hide"}
+E02_crop_extent <- extent(rivers_split_shp)
+
+filled_dem_r <- crop(filled_E99_dem_r, E02_crop_extent, snap="out") 
+if (whattodo) (filled_dem_r <- SAVEandOPEN_R(filled_dem_r, output_path, "E02_DEM_OutR"))
+filled_dem_r <- OPEN_R(output_path, "E02_DEM_OutR")
+E02_ref_r <- filled_dem_r
+
+slope_r <- crop(slope_r, E02_crop_extent, snap = "out")
+if (whattodo) (slope_r <- SAVEandOPEN_R(slope_r, output_path, "E02_slope_r_OutR"))
+slope_r <- OPEN_R(output_path, "E02_slope_r_OutR")
+FIX_PROJ_R(slope_r, E02_ref_r)
+
+bool_r_r <- crop(bool_r_r, E02_crop_extent, snap="out")
+if (whattodo) (bool_r_r <- SAVEandOPEN_R(bool_r_r, output_path, "E02_rivers_bool_OutR"))
+bool_r_r <- OPEN_R(output_path, "E02_rivers_bool_OutR")
+FIX_PROJ_R(bool_r_r, E02_ref_r)
+```
+
+## River reach ID raster
+
+In this section, we transform the boolean river raster to the river reach ID raster.
+
+The input data are the shapefile of the polygons of buffered river reach IDs and the boolean river raster. 
+
+```{r results = "hide"}
+bool_r_r
+boundary_rivers_shp
+```
+
+The shapefile is rasterized and masked with the boolean river raster.
+
+```{r results = "hide"}
+if (whattodo){
+  rivers_r <- rasterize(boundary_rivers_shp, E02_ref_r, field="RCH_ID")
+  rivers_r <- crop(rivers_r, E02_crop_extent, snap="out")
+  rivers_r <- mask(rivers_r, bool_r_r)
+  SAVEandOPEN_R(rivers_r, output_path, "E02_riversID_r_OutR")
+}
+rivers_r <- OPEN_R(output_path, "E02_riversID_r_OutR")
+FIX_PROJ_R(rivers_r, E02_ref_r)
+```
+
+## DEM validation
+
+Input data are:
+```{r results = "hide"}
+GPX_xls_df
+msrmts_raw_shp #  Merged GPX transformed as shp on ArcGIS
+FIX_PROJ_SHP(msrmts_raw_shp, E02_ref_r)
+```
+
+```{r}
+GPX_xls_df <- GPX_xls_df[, colnames(GPX_xls_df) %in% c("GPX_ID", "LULC.Name", "LULC.Code", "Description", "Msrmt_Type")]
+
+# Import .shp file and clean the table
+msrmts_shp <- msrmts_raw_shp
+colnames(msrmts_shp@data)[colnames(msrmts_shp@data)=="Name"] <- "GPX_ID"
+colnames(msrmts_shp@data)[colnames(msrmts_shp@data)=="Comment"] <- "Date"
+msrmts_shp <- msrmts_shp[, colnames(msrmts_shp@data) %in% c("GPX_ID", "Date", "Elevation")]
+msrmts_shp@data$GPX_ID <- as.numeric(msrmts_shp@data$GPX_ID)
+msrmts_shp <- msrmts_shp[msrmts_shp@data$GPX_ID %in% GPX_xls_df$GPX_ID,]
+
+# Merge tables and save .shp file
+msrmts_shp@data <- left_join(msrmts_shp@data, GPX_xls_df, by = "GPX_ID")
+options(warn=-1)
+if (whattodo) (msrmts_shp <- SAVEandOPEN_SHP(msrmts_shp, output_path, "E99_LULC_FieldWork_ptshp_OutR"))
+msrmts_shp <- OPEN_SHP(output_path, "E99_LULC_FieldWork_ptshp_OutR")
+options(warn=0)
+```
+
+We calculate the root mean square error (RMSE) between the DEM raster and the elevation measured on the field in March 2017 with a Garmin OREGON 650 GPS device. We discard elevation measurements taken at or close to landslides and from bridges.  
+
+```{r}
+tolerance = 25
+index_v <- which (msrmts_shp@data$LULC_Nm!="Water" & msrmts_shp@data$Msrmt_T=="Direct")
+msrmts_shp <- msrmts_shp[index_v,]
+aa <- raster::extract(filled_dem_r, msrmts_shp, method = "bilinear")
+bb <- aa-msrmts_shp@data$Elevatn
+select_v <- which( !(abs(bb) >tolerance & msrmts_shp@data$LULC_Nm =="Barrenland") )
+bb <- bb[select_v]
+rmse <- sqrt(1/length(bb) * sum(bb^2, na.rm=TRUE ))
+```
+
+The RMSE obtained with the selected `r round(length(index_v), 0)` points is `r round(rmse,2)` m. These validation results align with the SRTM mission's technical specifications, which fix an upper threshold for the absolute elevation error of 16 m (Castel and Oettli 2008, Hofton et al. 2006). 
+
+# Hazard module - quantiles of water stage
+
+## Background
+
+Let us first define what a return period is. The return period in years, denoted $T$, where $T \ge 1$, is the mean time between two occurrences of a phenomenon, e.g. flood duration, water stage, or damage in monetary terms, of at least the same magnitude $k$.The annual exceedance probability $p$ is defined to be $1/T$. It is the probability that a phenomenon expressed by a random variable $X$ exceeds the magnitude $k$ in a given year. For instance, if $X_i$ represents the water height on day $i$ of a year, then for an event of return period $T$, 
+\[
+\Pr(\max \{ X_i \} > k) = \frac{1}{T}
+\]
+where the maximum is taken over a single year.
+
+In this section, we therefore derive the probability distribution of the annual maxima of water stage for each seven river reaches. For each combination of (1) one of the three scenarios of water levels and (2) one of the seven river reaches, water stage is estimated.
+
+The following assumptions are made: 
+
+1. Scenarios correspond to three x%-quantiles (`r PASTE_INTEXT(qtles_v * 100)`) of the fitted distribution of measured or observed water stages; 
+2. Water stage in the flood extent of a river reach is constant;
+3. Water stages across river reaches are independent; 
+4. Fitted distributions or distribution families can vary across river reaches.
+
+Data of mean daily water stage (H) and discharge (Q) were purchased from DHM in January 2017. H, Q, or both were measured by DHM with five manual hydrological stations. DHM provides no documentation on the type of hydrological stations, data management, and data processing. For example, data strongly suggest that rating curves are used to derive water height H from discharge Q or vice versa. However, we could not get confirmation from DHM of this assumption, nor could we obtain from DHM the rating curves used for the derivation of H from Q (or Q from H). 
+
+## Data pre-processing
+
+In this section, we describe how we preprocess the data before analysing it.
+
+```{r names}
+station_IDs   <- c("610"        , "620"        , "625"                 , "629"                  , "630")
+station_names <- c("Bahrabise"  , "Jalbire"    , "Dolalghat (Sunkoshi)", "Dolalghat (Indrawati)", "Pachuwarghat")
+all_lat       <- c("27d47'18\"N", "27d48'20\"N", "28d38'30\"N"         , "27d38'20\"N"          , "27d33'30\"N")
+all_long      <- c("85d53'55\"E", "85d46'10\"E", "85d43'00\"E"         , "85d42'30\"E"          , "85d45'10\"E")
+dhm_stn <- data.frame(ID=station_IDs, name=station_names,
+                      long=as.numeric(char2dms(all_long)), 
+                      lat=as.numeric(char2dms(all_lat)),
+                      stringsAsFactors = FALSE)
+coordinates(dhm_stn) <- ~long + lat
+proj4string(dhm_stn) <- CRS(paste("+proj=longlat +datum=WGS84", "+no_defs +ellps=WGS84 +towgs84=0,0,0", sep=" "))
+```
+
+```{r read_H}
+fnames <- list.files(paste0(inputDHM_path,'/Daily_mean_H/'), full.names = TRUE)
+mean_H <- NULL
+for(f1 in fnames) {
+  tmp_H <- read.csv(f1, header=FALSE, skip=1, stringsAsFactors = FALSE,
+                    col.names=c('date', 'H'))
+  tmp_H$date <- as.Date(tmp_H$date, format="%d/%b/%Y")
+  this_station_id <- sapply(station_IDs, grepl, f1)
+  tmp_H$station_ID <- station_IDs[this_station_id]
+  mean_H <- rbind(mean_H, tmp_H)
+}
+```
+
+After reading in the H data, we find that there are some negative values. In total, there are 6 dates with negative H readings. These negative values are replaced with the mean of the nearest neighbours (in time). In a few of the cases, there is only one neighbour. Hence we replace the negative value with the reading of the nearest neighbour.
+
+```{r handle_negative_values}
+filter(mean_H, H < 0) -> neg_H
+mean_H$H[mean_H$date == neg_H$date[1]] <- 0.59
+mean_H$H[mean_H$date == neg_H$date[2]] <- 0.5*(0.67 + 1.52)
+mean_H$H[mean_H$date == neg_H$date[3]] <- 0.5*(0.85 + 1.31)
+mean_H$H[mean_H$date == neg_H$date[4]] <- 0.5*(0.14 + 0.13)
+mean_H$H[mean_H$date == neg_H$date[5]] <- 0.31
+mean_H$H[mean_H$date == neg_H$date[6]] <- 0.26
+```
+
+Then, we read Q values.
+
+```{r read_Q}
+fnames <- list.files(paste0(inputDHM_path,'/Daily_mean_Q/'), full.names = TRUE) 
+mean_Q <- NULL
+for(f1 in fnames) {
+  tmp_Q <- read.csv(f1, header=FALSE, skip=1, stringsAsFactors = FALSE,
+                    col.names=c('date', 'Q'))
+  tmp_Q$date <- as.Date(tmp_Q$date, format="%d/%b/%Y")
+  this_station_id <- sapply(station_IDs, grepl, f1)
+  tmp_Q$station_ID <- station_IDs[this_station_id]
+  mean_Q <- rbind(mean_Q, tmp_Q)
+}
+```
+
+We merge the Q data with the H data for the complete dataset. The final dataset looks like this:
+
+```{r merge_HQ}
+HQ <- full_join(mean_H, mean_Q, by=c("date", "station_ID"))
+HQ <- HQ %>% left_join(slot(dhm_stn, "data"), by = c("station_ID"="ID"))
+# saveRDS(HQ, paste0(inputDHM_path,"/HQ.rds"))
+```
+
+The following line is the only line needed in this section, as the data has been processed and stored in this rds file.
+```{r}
+HQ <- readRDS(paste0(inputDHM_path,"/HQ.rds"))
+FMTD_KABLE(head(HQ))
+```
+
+Let's calculate the correlation of H between hydrological stations. 
+```{r}
+HQ_df <- data.frame(HQ)
+HQ_short <- HQ_df[, colnames(HQ_df) %in% c("date", "H", "station_ID")]
+HQ_corr <- data.frame(date = seq(from = min(HQ_short$date), to = max(HQ_short$date), by = 1))
+unique_v <- unique(HQ_short$station_ID)
+
+for (i in 1:length(unique_v)){
+bb <- HQ_short[HQ_short$station_ID == unique_v[i], colnames(HQ_short) %in% c("date", "H")]
+dim(bb)
+HQ_corr <- left_join(HQ_corr, bb, by = "date" )
+}
+
+colnames(HQ_corr)[-1] <- unique_v
+y <- apply(HQ_corr[, 2:6], 2, function(x) (length(which(!is.na(x)))))
+x <- round(cor(HQ_corr[, -1], use = "pairwise.complete.obs", method = "pearson"), 2)
+diag(x) <- NA
+correlation_H <- c(min(x, na.rm = TRUE), max(x, na.rm = TRUE))
+```
+
+Let's reiterate our goal at this point: We need to estimate the annual maxima of water stage H for particular quantiles for each rive reach. To derive it from the data, we need to have the annual maximum H for a reasonable number of years. Therefore:
+
+- We discard sites if data at these sites are too scarce.
+- For the sites where data are not too scarce:
+    - If enough data of H are available for a year, we use H data
+    - If not enough data of H are available but enough data of Q are available, we imputate H from Q 
+- Finally, we calculate the annual maxima of H (either in original data or in original and imputated data).
+
+We proceed as explained above for each station's site. 
+
+## Data time-coverage and mean discharge
+
+We have this data time-coverage, mean, and standard deviation per station:
+
+```{r}
+my_HQ <- HQ
+my_HQ$Year <- year(my_HQ$date)
+ee <- dcast(my_HQ, formula = station_ID ~ Year, value.var = "Year", fun.aggregate = length)
+rownames(ee) <- ee[, 1]
+ee <- ee[, -1]
+
+bb_min <- apply(ee, 1, function(x)(min(which(x != 0))))
+bb_max <- apply(ee, 1, function(x)(max(which(x != 0))))      
+time_frame <- paste(colnames(ee)[bb_min], " to ", colnames(ee)[bb_max], sep = "") 
+
+final_df <- as.data.frame(paste(dhm_stn$name, ", ", dhm_stn$ID, sep = "")) 
+colnames(final_df) = "Location, Station ID"
+final_df$'Latitude (decimal)' <- dhm_stn$lat
+final_df$'Longitude (decimal)' <- dhm_stn$long
+final_df$'Time coverage' <- time_frame
+
+# mean and standard deviation of discharge for each station:
+options(warn = -1)
+attach(HQ, warn.conflicts = FALSE)
+aa <- aggregate(HQ[, colnames(HQ) %in% c("Q", "station_ID")], list(station_ID) , FUN = mean, na.rm = TRUE)
+bb <- aggregate(HQ[, colnames(HQ) %in% c("Q", "station_ID")], list(station_ID) , FUN = sd, na.rm = TRUE)
+detach(HQ)
+options(warn = 0)
+aa <- cbind(final_df, aa[,c(3)], bb[,c(3)])
+colnames(aa)[c(5, 6)] <- c("Mean of discharge Q [m3/s]", "Standard deviation of discharge Q [m3/s]")
+discharge_and_station_df <- aa
+```
+
+## Data selection and imputation
+
+### Bahrabise
+
+We create two new data frames with dates stretching from 1965-01-01 to 2014-12-31. The second one will be in tidy format, which is useful for plotting. The first one, with one record for each day, is still needed for fitting linear models.
+
+```{r extract_bah}
+bah <- filter(HQ, name == "Bahrabise") # untidy format
+bah_full_dates <- data.frame(
+  date=seq(as.Date("1965-01-01"), as.Date("2014-12-31"), by=1),
+  station_ID="610",
+  name="Bahrabise", stringsAsFactors = FALSE
+)
+bah <- left_join(bah, bah_full_dates, bah, by=c("date"))
+
+bah <- dplyr::select(bah, date, station_ID.x, name.x, H, Q)
+bah <- dplyr::rename(bah, station_ID = station_ID.x, name=name.x)
+bah2 <- gather(bah, d_type, val, H, Q) %>%  mutate(yr=year(date))
+```
+
+Now we create a plot to visually compare:
+
+- When we have both H and Q (These sections can be used for training a loess (i.e., local regression) model)
+- When we only have Q, and not H. These are when we can predict H. If we can do this well, there is a significant stretch between 1987 to 1993 which could be improved.
+
+```{r plot_H_Q}
+xyplot(val ~ date | d_type, data=bah2, type="l", ylab="H or Q",
+       layout=c(1,2),  scales=list(relation="free"), grid=TRUE,
+       xlab="Year")
+```
+
+Below is a plot of H against $Q^{1/3}$ for the entire period. The relationships are very strong whenever the two readings are present. The lowess regression lines are consistent (except for a few years). However, if you notice, there appear to be different ranges for the H values in different decades.
+
+```{r 2004_turningpoint}
+bah <- mutate(bah, yr=year(date), Q3 = Q^(1/3))
+xyplot(H ~ Q3 | as.factor(yr), data=bah, layout=c(5,10), 
+       xlab=expression(Q^{1/3}),
+       cex=0.5, col=gray(0.5,0.5), type=c("smooth","p"), 
+       col.line="red", as.table=TRUE)
+```
+
+In the following plot, the data for each decade is combined to fit a lowess ("locally weighted scatter-plot smoother") model for each decade. It is clear that the lowess model for the 1990s is very different from the rest. The range of H values observed in that decade is much higher than other years.
+
+```{r smoother_plot}
+bah_d <- mutate(bah, decade = paste(yr %/% 10 * 10, "s", sep="'"))
+xyplot(H ~ Q3, groups = as.factor(decade), data=bah_d,
+       xlab=expression(Q^{1/3}),
+       cex=0.5, type=c("smooth"), auto.key = list(columns=6))
+```
+
+If we inspect the previous lattice plot (i.e., in the code chunk "2004_turningpoint"") closely, the year 2004 seems to demonstrate something of a turning point. Some points correspond to the elevated model of the plot in the chode chunk smoother_plot, while the rest seem to revert to the relationship that was present before the 1990s. Below is a zoomed-in version of the plot for 2004. The blue points correspond to the period before 2004-10-16. The pink points correspond to points after that. It is reasonable to assume that 2004-10-16 is the date the relationship reverted back to the earlier one.
+
+```{r}
+bah_2004 <- filter(bah, yr == 2004) %>% 
+  mutate(aeon=ifelse(date <= as.Date("2004-10-16"), "e1", "e2"))
+xyplot(H ~ Q3, data=bah_2004, groups=aeon,
+       xlab=expression(Q^{1/3}), 
+       main="Year 2004\nThe turning point in the relationship")
+```
+
+Let us investigate the number of years for which we have such data for Bahrabise. Although a year has 365 days, we shall assume we have the full data if we have data for at least 350 of those days.
+
+```{r full_H_BB}
+dd <- group_by(bah2, yr) %>% 
+  filter(d_type == "H") %>% 
+  summarise(n_count=sum(!is.na(val))) %>% 
+  filter(n_count >= 350)
+full_HH_BB <- dd$yr
+```
+
+The data show that we have a full set of H measurements for `r length(full_HH_BB)` years. These years are `r PASTE_INTEXT(full_HH_BB)`. How many more years can we obtain? In other words, how many of the remaining years contain a full quota of Q readings, but are deficient in the number of H readings? Due to the issue regarding the changes in H readings, we should not consider the years where there are zero H readings. Predicting H for those years would require the use of a model from another year, which is dangerous considering the issue outlined above. 
+
+```{r partial_H_full_Q}
+dd2 <- group_by(bah2, d_type, yr) %>% 
+  summarise(n_count=sum(!is.na(val))) %>% 
+  spread(d_type, n_count) %>% 
+  filter(!(yr %in% full_HH_BB), Q >= 350, H > 0)
+partial_HH_BB <- dd2$yr
+```
+
+The data show that there are `r length(partial_HH_BB)` years that we could potentially fill up (with confidence) using a model trained from that year. These are the years `r paste(partial_HH_BB, sep=",")`. After the imputation for those five years, we have a total of 28 years of "full" data for Bahrabise.
+
+```{r model_fit, results = "hide"}
+# Allow for interpolation by the loess model.
+loess_models <- filter(bah, yr %in% partial_HH_BB) %>% 
+  group_by(yr) %>% 
+  do(mod=loess(H ~ Q3, data=., span=2/3, degree=1, 
+               control=loess.control(surface="direct")))
+```
+
+```{r imputation_1}
+# code for multiple imputation
+set.seed(123)
+
+num_imputations <- 5
+
+imputed_values_BB <- data.frame(yr= c(full_HH_BB, partial_HH_BB))
+
+for(nn in 1:num_imputations) {
+  imputed_H <- NULL
+  
+  for(ii in 1:length(loess_models$yr)) {
+    yy <- loess_models$yr[ii]
+    mm <- loess_models$mod[[ii]]
+    
+    tmp <- filter(bah, yr == yy, is.na(H))
+    
+    pp <- predict(mm, tmp, se=TRUE)
+    imH <- rnorm(length(pp$fit), pp$fit, pp$se) 
+    tmp$H <- imH
+    tmp$status <- "imputed"
+    imputed_H <- rbind(imputed_H, tmp)
+  }
+  
+  unimputed_H <- filter(bah, yr %in% c(full_HH_BB, partial_HH_BB), !is.na(H)) %>% 
+    mutate(status = "original")
+  
+  full_H_bb <- rbind(imputed_H, unimputed_H) %>% 
+    group_by(yr) %>% 
+    summarise(annual_max=max(H, na.rm=TRUE))
+  imputed_values_BB <- merge(imputed_values_BB, full_H_bb, by="yr")
+  colnames(imputed_values_BB)[nn+1] <- paste("annual_max_", nn, sep="")
+}
+```
+
+### Jalbire
+
+```{r extract_jal}
+jal <- filter(HQ, name == "Jalbire") # untidy format
+jal_full_dates <- data.frame(
+  date=seq(as.Date("1964-01-01"), as.Date("2008-12-31"), by=1),
+  station_ID="620",
+  name="Jalbire", stringsAsFactors = FALSE
+)
+jal <- left_join(jal_full_dates, jal, by=c("date")) %>% 
+  dplyr::select(date, station_ID.x, name.x, H, Q) %>% 
+  dplyr::rename(station_ID = station_ID.x, name=name.x)
+jal2 <- gather(jal, d_type, val, H, Q) %>% mutate(yr=year(date))
+jal <- mutate(jal, yr=year(date), Q3 = Q^(1/3))
+```
+
+As seen in the plot below, we have for Jalbire H data from 1995 to 2008. We have Q data from 1964 up to 2008. 
+
+```{r plot_H_Q_jal}
+xyplot(val ~ date | d_type, data=jal2, type="l", ylab="H or Q",
+       layout=c(1,2),  scales=list(relation="free"), grid=TRUE)
+```
+
+Let us next inspect the relationship between H and $Q^{1/3}$ for the years from 1995 to 2008. As we can see below, the relationship is very strong, but in several years, there are two distinct lines appearing. Let us study this closer.
+
+```{r}
+jal_tmp <- filter(jal, yr >= 1995)
+xyplot(H ~ Q3 | as.factor(yr), data=jal_tmp, layout=c(4,4), 
+       #cex=0.5, col=gray(0.5,0.5), type=c("r","p"), 
+       cex=0.5, col=gray(0.5,0.5), type=c("smooth","p"), 
+       col.line="red", as.table=TRUE)
+```
+
+Consider the years 1997 and 2007 - a decade apart. There are two distinct lines, but the dividing day is different. In light of this, we propose to fit a  single loess model to each year, and then imputate for the preceding six years (1989 to 1994) using an ensemble prediction. Upon checking, we realise that all those years have a full quota of $Q3$ readings.
+
+```{r}
+opar <- par(mfrow=c(1,2))
+jal_1997 <- filter(jal, yr == 1997) %>% 
+  mutate(period=ifelse(date <= as.Date("1997-08-05"), 1, 2))
+plot(dplyr::select(jal_1997, Q3, H), col=jal_1997$period, main="Year 1997",
+     xlab=expression(Q^{1/3}))
+legend("bottomright", pch=1, col=1:2, legend=c("1997-08-05 and before", "After 1997-08-05"),
+       cex=0.7)
+
+jal_2007 <- filter(jal, yr == 2007) %>% 
+  mutate(period=ifelse(date <= as.Date("2007-09-06"), 1, 2))
+plot(dplyr::select(jal_2007, Q3, H), col=jal_2007$period, main="Year 2007",
+     xlab=expression(Q^{1/3}))
+legend("bottomright", pch=1, col=1:2, legend=c("2007-09-06 and before", "After 2007-09-06"),
+       cex=0.7)
+par(opar)
+```
+
+```{r model_fit2, results="hide"}
+# Allow for interpolation by the loess model.
+loess_models <- filter(jal, yr >= 1995) %>% 
+  group_by(yr) %>% 
+  do(mod=loess(H ~ Q3, data=., span=2/3, degree=1, 
+               control=loess.control(surface="direct")))
+```
+
+```{r imputation_jal}
+# code for single imputation
+set.seed(124)
+
+num_imputations <- 5
+new_data <- filter(jal, yr %in% 1989:1994)
+imputed_values_JAL <- data.frame(yr=1989:2008)
+
+for(nn in 1:num_imputations) {
+  imputed_H <- NULL
+  
+  for(ii in 1:length(loess_models$yr)) {
+    mm <- loess_models$mod[[ii]]
+    
+    pp <- predict(mm, new_data, se=TRUE)
+    tmp <- rnorm(length(pp$fit), pp$fit, pp$se)
+    imputed_H <- cbind(imputed_H, tmp)
+  }
+  imH <- rowMeans(imputed_H)
+  new_data$H <- imH
+  new_data$status <- "imputed"
+  
+  unimputed_H <- filter(jal, yr >= 1995) %>% 
+    mutate(status = "original")
+  
+  full_H_jal <- rbind(new_data, unimputed_H) %>% 
+    group_by(yr) %>% 
+    summarise(annual_max=max(H, na.rm=TRUE))
+  
+  imputed_values_JAL <- merge(imputed_values_JAL, full_H_jal, by="yr")
+  colnames(imputed_values_JAL)[nn+1] <- paste("annual_max_", nn, sep="")
+}
+
+```
+
+Having done so, we have a total of 20 years of data for Jalbire.
+
+### Dolalghat (Sunkoshi)
+
+It appears we in fact have more H than Q data for this station. It might be best to just use the existing 13 years of almost complete data that we have for this station. 
+
+```{r extract_sun}
+sun <- filter(HQ, name == "Dolalghat (Sunkoshi)") # untidy format
+sun_full_dates <- data.frame(
+  date=seq(as.Date("1980-01-01"), as.Date("1995-12-31"), by=1),
+  station_ID="625",
+  name="Dolalghat (Sunkoshi)", stringsAsFactors = FALSE
+)
+sun <- left_join(sun_full_dates, sun, by=c("date")) %>% 
+  dplyr::select(date, station_ID.x, name.x, H, Q) %>% 
+  dplyr::rename(station_ID = station_ID.x, name=name.x)
+sun2 <- gather(sun, d_type, val, H, Q) %>% mutate(yr=year(date))
+sun <- mutate(sun, yr=year(date), Q3 = Q^(1/3))
+```
+
+```{r plot_H_Q_sun}
+xyplot(val ~ date | d_type, data=sun2, type="l", ylab="H or Q",
+       layout=c(1,2),  scales=list(relation="free"), grid=TRUE)
+```
+
+```{r}
+sun_count <- group_by(sun2, d_type, yr) %>% 
+  summarise(n_count=sum(!is.na(val))) %>% 
+  spread(d_type, n_count)
+full_H_sun <- sun_count$yr[sun_count$H >= 344]
+```
+
+The years that we consider to have full data for Sunkoshi are`r PASTE_INTEXT(full_H_sun)`. Two of these years have 344 and 349 days of data, while the rest have data for the entire year. In any of the years where we do not have full H data, the number of days for which we have Q data is always less than that for H. Hence we will not be able to fill up any of the years by imputation, i.e., using a model that regresses H on Q. We also discard the use a model that uses information from neighbouring stations, because the nearest neighbour to Dolalghat (Sunkoshi) is at least 90km away.
+
+```{r extract_sun_annual_max}
+imputed_values_SUN <- filter(sun, yr %in% full_H_sun) %>% 
+  group_by(yr) %>% 
+  summarise(annual_max = max(H, na.rm = TRUE))
+```
+
+### Dolalghat (Indrawati)
+
+The plots below show that we only have 3 years of data for Indrawati. We decide to leave this station out. Also, we are not confident about imputating values using information from neigbouring stations.
+
+```{r extract_ind}
+ind <- filter(HQ, name == "Dolalghat (Indrawati)") # untidy format
+ind_full_dates <- data.frame(
+  date=seq(as.Date("2006-01-01"), as.Date("2009-12-31"), by=1),
+  station_ID="629",
+  name="Dolalghat (Indrawati)", stringsAsFactors = FALSE
+)
+ind <- left_join(ind_full_dates, ind, by=c("date")) %>% 
+  dplyr::select(date, station_ID.x, name.x, H, Q) %>% 
+  dplyr::rename(station_ID = station_ID.x, name=name.x)
+ind2 <- gather(ind, d_type, val, H, Q) %>% mutate(yr=year(date))
+ind <- mutate(ind, yr=year(date), Q3 = Q^(1/3))
+```
+
+```{r plot_H_Q_ind}
+xyplot(val ~ date | d_type, data=ind2, type="l", ylab="H or Q",
+       layout=c(1,2),  scales=list(relation="free"), grid=TRUE)
+```
+
+### Pachuwarghat
+
+The time series below show that we have a long history of $Q$ data. However, the H data is much more recent. It begins only in the year 2002.
+
+```{r extract_pac}
+pac <- filter(HQ, name == "Pachuwarghat") # untidy format
+pac_full_dates <- data.frame(
+  date=seq(as.Date("1964-01-01"), as.Date("2014-12-31"), by=1),
+  station_ID="630",
+  name="Pachuwarghat", stringsAsFactors = FALSE
+)
+pac <- left_join(pac_full_dates, pac, by=c("date")) %>% 
+  dplyr::select(date, station_ID.x, name.x, H, Q) %>% 
+  dplyr::rename(station_ID = station_ID.x, name=name.x)
+pac2 <- gather(pac, d_type, val, H, Q) %>% mutate(yr=year(date))
+pac <- mutate(pac, yr=year(date), Q3 = Q^(1/3))
+```
+
+```{r plot_H_Q_pac}
+xyplot(val ~ date | d_type, data=pac2, type="l", ylab="H or Q",
+       layout=c(1,2),  scales=list(relation="free"), grid=TRUE)
+```
+
+```{r}
+pac_count <- group_by(pac2, d_type, yr) %>% 
+  summarise(n_count=sum(!is.na(val))) %>% 
+  spread(d_type, n_count)
+```
+
+In total, there are only 11 years for which we can consider ourselves to have a full year of H data. These are the years `r PASTE_INTEXT(pac_count$yr[pac_count$H >= 350])`. In 2008, we have no H data, but we have a full year of Q data. In 2014, we only have 273 H and Q observations; hence we do not conider it a full year. How strong is the relationship between H and Q in the years for which we do have data? It appears to be rock solid:
+
+```{r}
+pac_tmp <- filter(pac, yr >= 2002)
+xyplot(H ~ Q3 | as.factor(yr), data=pac_tmp, layout=c(4,4), 
+       #cex=0.5, col=gray(0.5,0.5), type=c("r","p"), 
+       cex=0.5, col=gray(0.5,0.5), type=c("smooth","p"), 
+       col.line="red", as.table=TRUE)
+```
+
+We should be confident that we can impute the H data for 2008, 2001, 2000, and 1999 (for which years we have full Q data), to give us 15 "full" years of data. We shall use an ensemble prediction just as we did for Jalbire.
+
+```{r model_fit3, results="hide"}
+# Allow for interpolation by the loess model.
+yrs_to_fit <- c(2002:2007, 2009:2014)
+loess_models <- filter(pac, yr %in% yrs_to_fit) %>% 
+  group_by(yr) %>% 
+  do(mod=loess(H ~ Q3, data=., span=2/3, degree=1, 
+               control=loess.control(surface="direct")))
+```
+
+```{r imputation_3}
+# code for single imputation
+set.seed(125)
+
+num_imputations <- 5
+yrs_full <- c(2002:2007, 2009:2013)
+yrs_partial <- c(1999:2001, 2008)
+imputed_values_PAC <- data.frame(yr=c(yrs_full, yrs_partial))
+
+for(nn in 1:num_imputations) {
+  imputed_H <- NULL
+  new_data <- filter(pac, yr %in% yrs_partial)
+  
+  for(ii in 1:length(loess_models$yr)) {
+    mm <- loess_models$mod[[ii]]
+    
+    pp <- predict(mm, new_data, se=TRUE)
+    tmp <- rnorm(length(pp$fit), pp$fit, pp$se)
+    imputed_H <- cbind(imputed_H, tmp)
+  }
+  imH <- rowMeans(imputed_H)
+  new_data$H <- imH
+  new_data$status <- "imputed"
+  
+  unimputed_H <- filter(jal, yr %in% yrs_full) %>% 
+    mutate(status = "original")
+  
+  full_H_sun <- rbind(new_data, unimputed_H) %>% 
+    group_by(yr) %>% 
+    summarise(annual_max=max(H, na.rm=TRUE))
+  
+  imputed_values_PAC <- merge(imputed_values_PAC, full_H_sun, by="yr")
+  colnames(imputed_values_PAC)[nn+1] <- paste("annual_max_", nn, sep="")
+} 
+```
+
+Even if Pachuwarghat is outside the study area, the original and imputed data at this site can be used if the time series at Dolalghat (Indrawati) is satisfying, because we could cross-validate the data at Dolalghat (Sunkoshi). As we decided to discard the station at Dolalghat (Indrawati), we shall also discard the station at Pachuwarghat. 
+
+### Summary
+
+The table below shows how many years of full water stage data we have for each station, and how many years we imputated for each station.
+
+```{r results = "asis"}
+dd <- data.frame(Station=station_names, 
+                 Full=c(23, 14, 13, NA, NA),
+                 Impute =c(5,6,NA, NA, NA),
+                 Total=c(28, 20, 13,NA,NA), stringsAsFactors = FALSE)
+colnames(dd) <- c("Station Names", "Full yrs", "Imputed yrs", "Total yrs")
+FMTD_KABLE(dd)
+```
+
+## Computing L-moments & L-moment Ratios
+
+In this section, we first compute the L-moments for each site except for Dolalghat (Indrawati). Following that, we perform a screening to test how different the sites are from one another. 
+
+```{r compute_lmoms}
+# Compute all means 
+m_BB <- dplyr::select(imputed_values_BB, -1) %>% 
+  apply(1, mean)
+m_JAL <- dplyr::select(imputed_values_JAL, -1) %>% 
+  apply(1, mean)
+m_PAC <- dplyr::select(imputed_values_PAC, -1) %>% 
+  apply(1, mean)
+m_SUN <- imputed_values_SUN$annual_max
+reg_data <- list(BB=m_BB, JAL=m_JAL, PAC=m_PAC, SUN=m_SUN)
+# site estimates of L-moments
+reg_lm <- regsamlmu(reg_data)
+```
+
+Here is a plot of the L-moment ratios of the 4 sites, along with the weighted average of the L-moments. The weights are determined by the number of observations that we have from each site.
+
+```{r, fig.keep = "last"}
+regional_lmom <- regavlmom(reg_lm)
+try(lmrd(reg_lm), silent = TRUE)
+text(reg_lm[, 5:6 ], labels=reg_lm$name, pos=c(4, 2, 3, 4))
+lmrdpoints(regional_lmom[3], regional_lmom[4], pch=1, col="blue")
+```
+
+The L-moment ratio diagram shows that the L-values are not very close to one another. The moments for Dolalghat (Sunkoshi) are very far away from even the regional average, which is shown as a blue circle. The discordant measure and heterogeneity are too large to conclude that we can assume a regional pattern.
+
+## Fitting Distributions
+
+We fit a distribution and assess its goodness-of-fit according to criteria spelt out in Hosking (2005). We fit the distributions using the method of L-moments. We then pick the best fitting distribution as the one with the smallest Kolmogorov-Smirnoff test statistic.
+
+We shall consider the following distributions and distribution families, separately for stations at Bahrabise, Jalbire, and Dolalghat (Sunkoshi): exponential, gamma, generalized extreme-value, generalized logistic, generalized Pareto, generalized Normal, Gumbel type I, the three-parameter lognormal, normal, Pearson type III and Weibull.
+
+```{r, fig.keep="last"}
+dist_to_consider <- c("exp", "gam", "gev", "glo", "gpa", "gno", "gum", "ln3", "nor", "pe3", "wei")
+
+opar <- par(mfrow=c(2,2))
+# For BB
+D <- rep(0, length(dist_to_consider))
+for(ii in 1:length(dist_to_consider)) {
+  dd <- dist_to_consider[ii]
+  samlm <- samlmu(m_BB)
+  F <- get(paste("cdf",dd, sep="")) # to understand, type "cdfexp" or "cdfgam" in the console
+  params <- get(paste("pel",dd, sep=""))(samlm)
+  D[ii] <- KS(m_BB, F, params)
+}
+plot(ecdf(m_BB), main="BB")
+id <- which.min(D)
+x <- seq(-1, 7, by=0.2)
+dist_BB <- dist_to_consider[id]
+p_BB <- get(paste("pel", dist_BB, sep=""))(samlmu(m_BB))
+y <- get(paste("cdf", dist_BB, sep=""))(x, p_BB)
+lines(x,y, col="red")
+
+# For JAL
+D <- rep(0, length(dist_to_consider))
+for(ii in 1:length(dist_to_consider)) {
+  dd <- dist_to_consider[ii]
+  samlm <- samlmu(m_JAL)
+  F <- get(paste("cdf",dd, sep=""))
+  params <- tryCatch(get(paste("pel",dd, sep=""))(samlm), error = function(e) NA)
+  if(is.na(params[1]))
+    D[ii] <- NA 
+  else 
+    D[ii] <- KS(m_JAL, F, params)
+}
+plot(ecdf(m_JAL), main="JAL")
+id <- which.min(D)
+x <- seq(4, 6, by=0.05)
+dist_JAL <- dist_to_consider[id]
+p_JAL <- get(paste("pel", dist_JAL, sep=""))(samlmu(m_JAL))
+y <- get(paste("cdf", dist_JAL, sep=""))(x, p_JAL)
+lines(x,y, col="red")
+
+# For PAC (not analysed further after this)
+D <- rep(0, length(dist_to_consider))
+for(ii in 1:length(dist_to_consider)) {
+  dd <- dist_to_consider[ii]
+  samlm <- samlmu(m_PAC)
+  F <- get(paste("cdf",dd, sep=""))
+  params <- tryCatch(get(paste("pel",dd, sep=""))(samlm), error = function(e) NA)
+  if(is.na(params[1]))
+    D[ii] <- NA 
+  else 
+    D[ii] <- KS(m_PAC, F, params)
+}
+plot(ecdf(m_PAC), main="PAC")
+id <- which.min(D)
+x <- seq(3, 6, by=0.05)
+dist_PAC <- dist_to_consider[id]
+p_PAC <- get(paste("pel", dist_PAC, sep=""))(samlmu(m_PAC))
+y <- get(paste("cdf", dist_PAC, sep=""))(x, p_PAC)
+lines(x,y, col="red")
+
+# For SUN
+D <- rep(0, length(dist_to_consider))
+for(ii in 1:length(dist_to_consider)) {
+  dd <- dist_to_consider[ii]
+  samlm <- samlmu(m_SUN)
+  F <- get(paste("cdf",dd, sep=""))
+  params <- tryCatch(get(paste("pel",dd, sep=""))(samlm), error = function(e) NA)
+  if(is.na(params[1]))
+    D[ii] <- NA 
+  else 
+    D[ii] <- KS(m_SUN, F, params)
+}
+plot(ecdf(m_SUN), main="SUN")
+id <- which.min(D)
+x <- seq(1, 6, by=0.1)
+dist_SUN <- dist_to_consider[id]
+p_SUN <- get(paste("pel", dist_SUN, sep=""))(samlmu(m_SUN))
+y <- get(paste("cdf", dist_SUN, sep=""))(x, p_SUN)
+lines(x,y, col="red")
+
+par(opar)
+```
+
+The best fitting distributions are:
+
+- for Bahrabise, the three-parameter lognormal distribution,
+- for Dolalghat (Sunkoshi), the three-parameter lognormal distribution, and
+- for Jalbire, the exponential distribution.
+
+## Quantile estimation
+
+The input data is:
+
+```{r results = "hide"}
+RCH_xls_df
+```
+
+
+```{r}
+q_BB <- get(paste("qua", dist_BB, sep=""))(qtles_v, p_BB)
+q_SUN <- get(paste("qua", dist_SUN, sep=""))(qtles_v, p_SUN)
+q_JAL <- get(paste("qua", dist_JAL, sep=""))(qtles_v, p_JAL)
+q_values <- rbind(q_BB, q_SUN, q_JAL)
+colnames(q_values) <- paste0(rp_v, "-year water stage or ", round(qtles_v*100, 1), "%-quantile [m]")
+rownames(q_values) <- c(3,7,6)
+```
+
+For the river reaches where there are no stations with available data, we assume a Weibull distribution, a shape parameter of the Weibull distribution fitted to data at Bahrabise, and empirical 99%-quantiles of water stages from HPPs or local witnesses.
+
+```{r}
+RCH_xls_df              <- RCH_xls_df[RCH_xls_df$in_scope==1 & RCH_xls_df$modelling %in% c("Q_from_HPP", "local_witness"), colnames(RCH_xls_df) %in% c("RCH_ID", "Q_from_HPP", "local_witness")]
+RCH_xls_df$emp_quantile <- as.numeric(c(RCH_xls_df$Q_from_HPP[1:3], RCH_xls_df$local_witness[4]))
+RCH_xls_df$shape        <- pelwei(samlmu(m_BB))[3]
+RCH_xls_df$scale        <- RCH_xls_df$emp_quantile * (-log(1-0.99))^(-1/RCH_xls_df$shape)
+RCH_xls_df              <- RCH_xls_df[, colnames(RCH_xls_df) %in% c("RCH_ID","emp_quantile", "shape", "scale") ]
+```
+
+We combine it all in a table.
+
+```{r}
+for (i in 1:dim(RCH_xls_df)[1]){
+  bb <- qweibull(qtles_v, shape = RCH_xls_df$shape[i] ,  scale = RCH_xls_df$scale[i] , lower.tail = TRUE,log.p = FALSE)
+  q_values <- rbind(q_values, bb)
+  rownames(q_values) [dim(q_values)[1]] <- RCH_xls_df$RCH_ID[i]
+}
+q_values <- q_values[order(rownames(q_values)), ]
+```
+
+Prepare data to print the table in a section below.
+```{r}
+q_values_toprint           <- q_values
+q_values_toprint           <- round(q_values_toprint, 2)
+q_values_toprint <- cbind(final_river_reaches_df$`Name of river reach`, q_values_toprint)
+colnames(q_values_toprint) <- c("River reach", "Water stage [m] in the baseline-flood scenario", "Water stage [m] in the medium-extreme-flood scenario", "Water stage [m] in the high-extreme-flood scenario")
+```
+
+# Hazard module - flood rasters
+
+Here is the input data
+```{r results="hide"}
+rivers_r
+filled_dem_r
+q_values
+
+max_extent <- 30
+fill_dir_v <- c("H", "V", "H", "V", "V", "H", "H")
+```
+
+We call the user-built functions and save the flood rasters for the three scenarios of water stages. 
+```{r time_consuming_3}
+FIX_PROJ_R(rivers_r, filled_dem_r)
+y <- rivers_r
+DEM <- filled_dem_r
+flood_r_l <- list()
+
+if (whattodo) {
+  ll <- SPREAD_RIVER(y, max_extent, fill_dir_v)
+  for (jj in 1:dim(q_values)[2]) {
+    stage <- c(q_values[,jj])
+    rr <- POUR_WATER(DEM, y, ll, fill_dir_v, stage)
+    flood_r_l[[jj]] <- STACK_FLOOD(rr, DEM)
+    SAVEandOPEN_R(flood_r_l[[jj]], output_path, paste0("E02_flood_",jj, "_OutR"))
+  }
+}
+
+for (jj in 1:dim(q_values)[2]) {
+  flood_r_l[[jj]] <- OPEN_R(output_path, paste0("E02_flood_",jj, "_OutR"))
+}
+```
+
+The following table shows the number of pixels flooded for each flood scenario.
+
+```{r}
+aa <- length(which(flood_r_l[[1]][] == 1))
+bb <- length(which(flood_r_l[[2]][] == 1))
+cc <- length(which(flood_r_l[[3]][] == 1))
+pixel_v <- c(aa, bb, cc)
+increase_from1 <- round(100 * c(NA, (bb - aa) / aa, (cc - aa) / aa))
+increase_from2 <- round(100 * c(NA, NA            , (cc - bb) / bb))
+pixel_df <- as.data.frame(rbind(pixel_v, increase_from1, increase_from2))
+colnames(pixel_df) <- c("Flood_Sc_1", "Flood_Sc_2", "Flood_Sc_3")
+rownames(pixel_df) <- c("Pixel count", "%increase from Flood_Sc_1", "%increase from Flood_Sc_2")
+
+FMTD_KABLE(pixel_df, rownames_bool = TRUE)
+```
+
+We ensure that there is no case of lower flood scenarios showing flooded pixels that are not flooded in higher flood scenarios. 
+```{r}
+vv <- MATRICISE(flood_r_l[[1]])
+ww <- MATRICISE(flood_r_l[[2]])
+if(any(is.na(ww) & ! is.na(vv))) (message("Some pixels are flooded in lower scenario but not in higher scenario."))
+
+vv <- MATRICISE(flood_r_l[[2]])
+ww <- MATRICISE(flood_r_l[[3]])
+if(any(is.na(ww) & ! is.na(vv))) (message("Some pixels are flooded in lower scenario but not in higher scenario."))
+
+vv <- MATRICISE(flood_r_l[[1]])
+ww <- MATRICISE(flood_r_l[[3]])
+if(any(is.na(ww) & ! is.na(vv))) (message("Some pixels are flooded in lower scenario but not in higher scenario."))
+```
+
+Are there any pixels that are not flooded even though they represent rivers?
+
+```{r}
+ss          <- MATRICISE(y)
+qq          <- MATRICISE(flood_r_l[[1]])
+nn          <- is.na(qq) & !is.na(ss)
+river_reach <- ss[nn]
+count_v     <- length(river_reach)
+
+qq          <- MATRICISE(flood_r_l[[2]])
+nn          <- is.na(qq) & !is.na(ss)
+river_reach <- ss[nn]
+count_v     <- c(count_v,length(river_reach))
+
+qq          <- MATRICISE(flood_r_l[[3]])
+nn          <- is.na(qq) & !is.na(ss)
+river_reach <- ss[nn]
+count_v     <- c(count_v,length(river_reach))
+```
+
+Very few pixels are not flooded even if they are rivers, for each of the three scenarios respectively `r PASTE_INTEXT(count_v)` pixels. It is because assumptions of a constant direction (horizontal or vertical) for the entire river reach are in these cases overstretched (see for example upstream of river reach 3 where a small stretch of river is going east to west, whereas river reach 3 is filled horizontally).
+
+# Hazard module - landslides
+
+## Overview
+
+Rasters of toes of potential landslides are derived in this section. Potential landslide toes are randomly sampled in the aggregation module according to sampling weights and the ratio of actual to potential landslides, both calculated in this section. The sampled potential toes of landslides (from random sampling), the mean area size of landslides (calculated in this section), and the orientation of landslides from toe to crest (also derived in this section) are input data for the derivation of a raster of actual landslides in each random sampling in the aggregation module.
+
+## Rasters of potential landslide toes
+
+The input data are:
+```{r results="hide"}
+min_slope <- 30 
+rivers_r
+```
+
+```{r, echo=FALSE}
+weights_for_angle <- paste(c("0 = 0", "90 = 2/3", "135 = 1/3", "180 = 0", "225 = 1/3", "270 = 2/3"), collapse = "; ")
+```
+
+We assume that the toes of potential landslides:
+
+- are adjacent to a river curve, and
+- are located where the slope of the terrain is equal to or larger than `r min_slope`% (see Kargel, 2016), and
+- are flooded according to the flood rasters derived above, and so there are as many potential toe rasters as flood rasters.
+
+To understand the output of the following code chunk, see the documentation of the function TOES_LIST (i.e., type ?TOES_LIST).
+
+```{r time_consuming_4}
+if (whattodo) {
+  toes_r_list <- TOES_LIST(rivers_r, weights_for_angle)
+  toe_weight_angle_r <- SAVEandOPEN_R(toes_r_list [[2]], output_path, "E02_toe_weight_angle_r_OutR")
+  toe_1to8_r <- toes_r_list [[1]]
+  toe_curve_slope_r <- focal(slope_r, w = matrix(1, nrow=3, ncol=3), fun = max, na.rm=TRUE, pad=TRUE)
+  toe_1to8_r[which(toe_curve_slope_r[]<min_slope)] <- NA
+
+  for (i in 1:length(qtles_v)) {
+    temp_m <- toe_1to8_r
+    nn <- which(is.na(flood_r_l[[i]][]))
+    temp_m[nn] <- NA
+    SAVEandOPEN_R(temp_m, output_path, paste0("E02_pot_toe_",i, "_OutR"))
+  }
+}
+
+pot_toe_r_l <- list()
+for (i in 1:length(qtles_v)) {
+  pot_toe_r_l[[i]] <- OPEN_R(output_path, paste0("E02_pot_toe_",i, "_OutR")) # each raster element is the new masked_toe_1to8_r
+}
+
+toe_weight_angle_r <- OPEN_R(output_path, "E02_toe_weight_angle_r_OutR")
+```
+
+## Sampling weight rasters
+
+In this step, rasters of weights of potential landslide's toes are produced by multiplying a raster of angle weights with a raster of geological formation weights for each raster of potential landslide toes. The input data are:
+
+```{r results="hide"}
+pot_toe_r_l
+rivers_r
+weights_for_angle 
+geol_shp
+```
+
+The raster of angle weights is derived by finding for each toe of the raster of toe orientation the outside angle of the river curve adjacent to the toe and replacing the outside angle with its corresponding weight (the smaller the outside angle, the larger the weight). Its derivation takes place above and the result is:
+
+```{r results="hide"}
+toe_weight_angle_r 
+```
+
+The raster of rock formation is derived from interview data. The more fragile the predominant rock of the geological formation is, the higher the weight is. 
+
+```{r}
+select_v <- c("GEOL_ID", "Formation", "Fragility", "Main rock", "Weight") #Strength: (low == 4 and high == 1)
+GEOL_xls_df <- GEOL_xls_df[,select_v]
+geol_shp <- crop(geol_shp, study_area_shp)
+
+select_again_v <- c( "Formation", "Main rock", "Weight")
+FMTD_KABLE(GEOL_xls_df[,select_again_v])
+```
+
+We rasterize the weights of geological formations and assume the highest weight when there is no information.
+
+```{r}
+if (whattodo) {
+  geol_shp@data <- left_join(geol_shp@data, GEOL_xls_df, by="Formation") 
+  # Rasterize
+  toe_weight_rock_r <- rasterize(geol_shp, E02_ref_r, field="Weight", fun = max, background = max(GEOL_xls_df$Weight)) # Setting the background provide the default value of the raster (instead of it being NA). Setting the fun tells R which value to take when, on the same pixel, there are two polygons. 
+  geol_cropped_r <- crop(toe_weight_rock_r, E02_crop_extent, snap="out")
+  SAVEandOPEN_R(geol_cropped_r, output_path, "E02_toe_weight_rock_r_OutR")
+}
+
+# We open the raster.
+toe_weight_rock_r <- OPEN_R(output_path, "E02_toe_weight_rock_r_OutR")
+```
+
+The weights for angle and rock are combined.
+
+```{r}
+weights_toes_r <- toe_weight_angle_r
+denom <- max(toe_weight_angle_r[], na.rm=TRUE) * max(toe_weight_rock_r[], na.rm=TRUE)
+weights_toes_r[] <- toe_weight_angle_r[] * toe_weight_rock_r[]/denom 
+
+if (whattodo) {
+  for (i in 1:length(qtles_v)) {
+    temp_r <- weights_toes_r
+    nn <- which(is.na(pot_toe_r_l[[i]][]))
+    temp_r[nn] <- NA
+    SAVEandOPEN_R(temp_r, output_path, paste0("E02_toe_weight_all_",i, "_OutR"))
+  }
+}
+ 
+weights_r_l <- list()
+for (i in 1:length(qtles_v)) {
+  weights_r_l[[i]] <- OPEN_R(output_path, paste0("E02_toe_weight_all_",i, "_OutR"))
+}
+```
+
+## Mean area of landslides
+
+In this step, the mean area of landslides in the study area is estimated. Our approach assumes that the size of landslide area is deterministic and that the mean size of historical landslides on the study area equals the size of the modelled flood-induced landslides.The input data are shapefile of polygons of landslides and their date of occurrence between 2001 and 2016:
+
+```{r results = "hide"}
+ldsd_shp
+```
+
+We calculate the area of landslides and the corresponding number of pixels.
+
+```{r}
+# clean attribute table of landslide .shp file
+select_v <- c("Name", "FolderPath", "SymbolID")
+ldsd_shp <- ldsd_shp[, select_v]
+ldsd_shp@data$UniqueID <- 1:nrow(ldsd_shp@data)
+FIX_PROJ_SHP(ldsd_shp, E02_ref_r)
+
+# Extract landslide from study area
+index_contains_v <- gContains(study_area_shp, ldsd_shp, byid= TRUE) # gContains returns TRUE only for these landslides completely contained in the studya area
+ldsd_extract_shp <- ldsd_shp[which(index_contains_v == TRUE),]
+
+# Get year of observation between 2001 and 2016
+aa <- unique(ldsd_extract_shp$Name)
+aa <- aa[order(aa)]
+aa_replace <- c(2014, 2012, 2012, 2012, 2013, 2009, 2009, 2014, 2014, 2012, 2014, 
+                + 2015, 2014, 2015, 2005, 2013, 2014, 2015, 2015, 2014, 2005, 2015, 
+                + 2004, 2004, 2001, 2015, 2013, rep(2015,11), 2016, rep(2015, 4), 2016, 2014)
+bb <- data.frame(Name=aa, Year = aa_replace)
+options(warn=-1)
+ldsd_extract_shp@data <- left_join(ldsd_extract_shp@data, bb, by ="Name")
+options(warn=0)
+
+# area of landslides and the number of pixels
+ff <- CALC_AREA(ldsd_extract_shp, byid_area = TRUE, unit_area = "m2")
+mean_ldsd_area_m2 <- mean(ff) 
+count_pixel <- round(mean_ldsd_area_m2 / side_length^2,0) 
+```
+
+The mean landslide has a size of about `r round(mean_ldsd_area_m2/1000,0)*1000` m^2^. 
+
+Last, we calculate the discrete distribution of the mean slope in % per landslide in the study area. A 10%-quantile of 33%, a median of 41% and a 80%-quantile of 47% bring evidence that we are conservative (i.e., the assumed lower threshold is low compared with observations) with the lower threshold of `r min_slope`% for the selection criteria of locations of toes of landslides. 
+
+```{r time_consuming_5}
+if (whattodo) {
+  aa <-  raster::extract(slope_r, ldsd_extract_shp)
+  bb <- lapply(aa, mean)
+  dd <- unlist(bb)
+  quantile(dd, probs=seq(0, 1, 0.1), na.rm=TRUE)
+}
+```
+
+## Ratio of landslide count
+
+The ratio between the mean count of historical landslides per year and the maximum count of historical landslides across years is calculated. This ratio is assumed to be equal to the ratio between the number of actual landslides and the number of potential landslides in the aggregation module.
+
+The data used is the shapefile of polygons of landslides as above and repeated here: 
+
+```{r results="hide"}
+ldsd_extract_shp
+scale_down <- 8
+buffer_degree <- buffer_degree/scale_down
+buffer_m <- round(buffer_m/scale_down, 0)
+```
+
+The input data is buffered around the rivers at a width of `r buffer_m` m on each river side before calculating the mean count per year. This is because we count the number of flood-induced landslides, which are unlikely to take place far from the river bed. 
+
+```{r}
+#Buffer rivers and intersect
+options(warn=-1)
+rivers_buffered_shp <- gBuffer(rivers_split_shp, width=buffer_degree, byid=FALSE, quadsegs=10) # error message is because the CRS used is a geographic CRS, and not projected. Moreover, to get the ID, use: x@polygons[[1]]@ID
+options(warn=0)
+rivers_buffered_shp@polygons[[1]]@ID <- as.character(1)
+rivers_buffered_shp <- SpatialPolygonsDataFrame(rivers_buffered_shp, data=as.data.frame(NA))
+aa <- gIntersects(rivers_buffered_shp, ldsd_extract_shp, byid=TRUE)
+
+# Buffer landslides and count
+xx <- ldsd_extract_shp[which(aa==TRUE),]
+xx <- data.frame(xx@data)
+xx <- xx[, colnames(xx) %in% c("Name", "Year")]
+count_per_year <- aggregate( . ~ Year, data = xx, length)
+count_v <- count_per_year[,2]
+lambda_percent <- mean(count_v)/max(count_v)
+```
+
+# Asset module (data preparation): LULC raster (R and ArcGIS)
+
+## Overview
+
+We proceed with the following step to derive the LULC raster:
+
+1. We determined before field work where field measurements should be taken. 
+2. Measurements from the field are used to train and test four algorithms of LULC classification: Classification and Regression Tree (CART), Random Forest (RF), Support Vector Machine (SVM), and Maximum Entropy (MaxEnt).
+3. The overall accuracy, ommission accuracy, commission accuracy, and kappa values are calculated for each algorithm to select the LULC raster with the underlying algorithm with the highest accuracy.
+4. GLMs are developed.
+5. The modelling steps on ArcGIS that are involved in this section are saved in sub-directories referred to in what follows and found in this directory:
+```{r results="hide"}
+LULC_path
+```
+
+6. Finally, note the following land-use types: 
+
+```{r}
+LULC_v <- c("Bare land", "Farmland", "Forest", "Settlement", "Snow", "Water")
+LULC_name_df <- data.frame(LULC_ID = 1:6, LULC_name = LULC_v)
+FMTD_KABLE(LULC_name_df, rownames_bool = FALSE)
+```
+
+## A priori field measurements
+
+In this section, both GPS points to be measured on the field and their associated land-use are derived from an initial LULC raster. The modelling of this initial LULC raster used regions of interest (ROIs) that were manually polygonised on Google Earth. Also, the polyline of roads is needed. See directories "002_Training_GEarth", "003_OutputGEE" and "004_Target_Fieldwork_Points".
+
+The steps in this section are performed with ArcGIS and are as follows: 
+
+1. Arctoolbox - Geoprocessing - Buffer:
+    + Input: Polylines of roads
+    + Value: 200 Meters
+    + End Type: Flat
+    + Outupt: Polygon of buffered roads
+
+2. Resample (Data Management)
+    + Input: LULC raster of 10 m by 10 m
+    + X and Y: 40 m
+    + Resampling technique: NEAREST
+    + Output: LULC raster of lower resolution (40m by 40m instead of 10 m by 10 m)
+
+3. Clip (Data Management)
+    + Input raster: LULC raster of lower resolution
+    + Extent: Polygon of buffered roads
+    + Check in the option "use Input Features for Clipping Geometry"
+    + Output: Raster of LULC with NoData except for intersect with buffered roads
+
+4. Spatial Analyst - Create Accuracy Assessment Points
+    + Input:Raster of LULC with NoData except for intersect with buffered roads
+    + Number of points: 40 points per LULC, i.e., 240 points for 6 LULC 
+    + Sampling strategy: STRATIFIED_RANDOM
+
+## ROI from field work measurements
+
+See folder "005_ROI_Fieldwork". We take the following steps (on ArcGIS, except otherwise explicitely stated):
+
+1. GPX to features (Conversion) for each four .gpx files
+
+2. Merge (Data Management) the four .shp files
+
+3. ArcGIS: Add points that will later be snapped:
+    + Start Edit
+    + Select points
+    + Copy and Paste
+    + Rename according to ID given in Excel file:
+    
+```{r results = "hide"}
+msrmts_raw_shp
+GPX_xls_df
+```
+
+4. On R, merge attribute table from .shp file and Excel file as outlined in the section on DEM validation above. 
+
+5. Snap as instructed in the attribute table's column "Description" of the Excel file, of which an excerpt is shown here:
+
+```{r}
+FMTD_KABLE(GPX_xls_df[!duplicated(GPX_xls_df$Msrmt_Type),], digits_args = 0)
+```
+
+6. Add manually some points. The final dataset used for training and validating the four algorithms is here.
+
+```{r results="hide"}
+LUDA_xls_df
+```
+
+We have the following count for each land class:
+```{r}
+GCPs_df <- LULC_name_df
+index_v <- LUDA_xls_df$`Source of measurement` == "From Google Earth / Sentinel"
+
+# from Google Earth / Sentinel
+hh <- LUDA_xls_df[index_v, ]
+gg <- as.data.frame(table(hh[, "LULC_ID"]))
+colnames(gg) <- c("LULC_ID", "After field work") 
+gg[,1] <- as.numeric(as.character(gg[,1]))
+GCPs_df <- left_join(GCPs_df, gg, by = "LULC_ID")
+
+# Not from Google Earth / Sentinel
+hh <- LUDA_xls_df[!index_v, ]
+gg <- as.data.frame(table(hh[, "LULC_ID"]))
+colnames(gg) <- c("LULC_ID", "From field work") 
+gg[,1] <- as.numeric(as.character(gg[,1]))
+GCPs_df <- left_join(GCPs_df, gg, by = "LULC_ID")
+
+FMTD_KABLE(GCPs_df, rownames_bool = FALSE, align_args = c(rep("l", 2), rep("r", 2)), digits_args = 0)
+```
+
+
+## LULC accuracy assessment
+
+### Study area, methods, and data
+
+Prepare input rasters:
+```{r}
+slope_r             <- OPEN_R  (input_path, "E99_slope_r_ArcGIS")
+E01_dem_r           <- crop(filled_E99_dem_r, study_area_shp, snap="out") 
+E01_slope_r         <- crop(slope_r, study_area_shp, snap="out")
+E01_aspect_r        <- crop(aspect_r, study_area_shp, snap="out")
+
+FIX_PROJ_R(E01_slope_r, E01_dem_r)
+FIX_PROJ_R(E01_aspect_r, E01_dem_r)
+```
+
+Elevation and size of study area:
+```{r}
+# Size of study area in km2
+area_buffered <- round(CALC_AREA(study_area_shp, byid_area = FALSE, unit_area = "km2"), 0)
+#Elevation range of study area in m
+dd <- quantile(E01_dem_r[])[c(1,3,5)]
+LULC_output_elevation_v <- as.data.frame(c(area_buffered, dd))
+```
+
+Slope in degree:
+```{r}
+LULC_output_slope_v <- as.data.frame(quantile(E01_slope_r[] / 100 * 90)[c(1,3,5)])
+```
+
+Aspect:
+```{r}
+break_v <- c(-1, 0, 22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5,337.5, 360)
+aspect_name <- c("Flat", "North", "Northeast" , "East", "Southeast", "South", "Southwest", "West" , "Northwest", "North")
+aa <- cut(E01_aspect_r[], breaks= break_v, include.lowest = TRUE)
+bb <- rep(NA, length(levels(aa)))
+for (i in 1:length(levels(aa))){
+bb[i] <- length(which(aa%in%levels(aa)[i]))
+}
+aspect_df <- data.frame(aspect_name, percent = bb / sum(bb) * 100)
+aspect_df <- aspect_df[order(aspect_df$percent, decreasing = TRUE), ]
+```
+
+Figure of study area:
+```{r}
+figure_called <- paste0("(", figure_path, "/LULCPaper_StudyArea.jpg)")
+```
+
+![]`r figure_called`
+
+Methods:
+
+The calculation of the Kappa statistics is tested in Excel first using an example from the a text book and reproduced in this code chunk. 
+```{r}
+# see and compare in "Master_Table.xlsx" tab "D081_LUEX.ID"
+#shell.exec("http://www.css.cornell.edu/faculty/dgr2/teach/R/R_ac.pdf")
+x_m <- matrix(c(35,14,11,1,4,11,3,0,12,9,38,4,2,5,12,2), nrow=4, byrow=TRUE)
+y <- vcd::Kappa(x_m, weights = c("Equal-Spacing"))
+y_unweighted <- y$Unweighted # corresponds in Excel sheet to kappa hat and Sigma of kappa hat
+zz <- "confint"(y, parm, level = 0.95) # corresponds in Excel sheet to CI at 5% (two sided)
+```
+
+Finally, these are the GCPs used for validation and training. As outlined above, some were collected on the field. For inaccessible areas, GCPs were collated from Google Earth and Sentinel-2 imagery data. 
+
+```{r}
+output_GCP <- FMTD_KABLE(GCP_xls_df)
+```
+
+Output for paper:
+
+- Study area size and elevation range:  `r FMTD_KABLE(LULC_output_elevation_v)`
+- Slope range: `r FMTD_KABLE(LULC_output_slope_v)`
+- Aspect: `r FMTD_KABLE(aspect_df)`
+- GCPs: `r output_GCP`
+
+### Results
+
+Calculations:
+
+```{r DataInput, results="hide"}
+#See folders "011_Results_tif" and "012_Results_other". The input data in this section is:
+LURE_xls_df
+REGR_xls_df
+```
+
+```{r User_Prod_all}
+name_v                <- c("RF", "CART" , "MaxEnt")
+acc_df                <- REGR_xls_df[REGR_xls_df$Topography == "All", colnames(REGR_xls_df) %in% c("LULC", "Technique", "User_acc", "Prod_acc")]
+
+prod_all              <- cast(acc_df, formula = LULC ~ Technique, value = "Prod_acc")
+prod_all$LULC         <- LULC_v
+colnames(prod_all)[1] <- "Producer's accuracy"
+
+user_all              <- cast(acc_df, formula = LULC ~ Technique, value = "User_acc")
+user_all$LULC         <- LULC_v
+colnames(user_all)[1] <- "User's accuracy"
+```
+
+```{r Kappa_OvAcc}
+overall_accuracy_v       <- rep(NA,3)
+
+CART_m                   <- as.matrix(LURE_xls_df[LURE_xls_df$Technique == "CART", 3:8])
+overall_accuracy_v [1]   <- OVERALL_ACCURACY(CART_m)
+CART_res                 <- vcd::Kappa(CART_m, weights = c("Equal-Spacing"))$Unweighted
+
+RF_m                     <- as.matrix(LURE_xls_df[LURE_xls_df$Technique == "RF", 3:8])
+overall_accuracy_v [2]   <- OVERALL_ACCURACY(RF_m)
+RF_res                   <- vcd::Kappa(RF_m, weights = c("Equal-Spacing"))$Unweighted
+
+ME_m                     <- as.matrix(LURE_xls_df[LURE_xls_df$Technique == "MaxEnt", 3:8])
+overall_accuracy_v [3]   <- OVERALL_ACCURACY(ME_m)
+ME_res                   <- vcd::Kappa(ME_m, weights = c("Equal-Spacing"))$Unweighted
+
+bb <- t(data.frame(CART_res, RF_res, ME_res))
+bb <- cbind(c(1,2,3),overall_accuracy_v, bb )
+bb <- bb[order(bb[,2], decreasing = TRUE),]
+colnames(bb) <- c("Algorithm_ID", "Overall accuracy" , "Kappa coef.", "Kappa st. dev.")
+bb[,2] <- round(bb[,2],2)
+rownames(bb) <- name_v
+
+aa <- data.frame(c(3,3,2), c(2, 1, 1))
+aa$better_prob <- 0
+colnames(aa)[1:3] <- c("Lower-Kappa technique (1st)", "Higher-Kappa technique (2nd)", "Probability of 2nd better than 1st technique [%]")
+
+for (i in 1:dim(aa)[1]) {
+  temp_low <- bb[aa[i,1],3:4]
+  temp_high <- bb[aa[i,2], 3:4]
+  z_score <- -(temp_low[1] - temp_high[1]) / sqrt(temp_low[2]^2 + temp_high[2]^2)
+  better_prob <- 1 - 2 * (1 - pnorm(z_score, 0,1)) # the two tailed probability that the second map is better than the first is (ie, the test suggests that the second map would in fact be better than the first with that probability)
+  aa[i,3] <- round(better_prob * 100, 2)
+}
+
+aa[, 1]   <- name_v[aa[, 1]]
+aa[, 2]   <- name_v[aa[, 2]]
+RF_MaxEnt <- aa[2, 3]
+RF_CART   <- aa[3,3]
+Kappa_res <- aa
+bb        <- bb[, -1]
+```
+
+We have three confusion matrices, where the **rows** represent the **mapped values** and the **columns** the **reference values** (the overal accuracy is in the last column and last row):
+
+```{r confusionmatrix}
+  
+CART_df <- NICE_DF(CART_m)
+temp1   <- FMTD_KABLE(CART_df, rownames_bool = TRUE, digits_args = 0)
+
+RF_df   <- NICE_DF(RF_m)
+temp2   <- FMTD_KABLE(RF_df, rownames_bool = TRUE, digits_args = 0)
+
+ME_df   <- NICE_DF(ME_m)
+temp3   <- FMTD_KABLE(ME_df, rownames_bool = TRUE, digits_args = 0)
+```
+
+
+Figure study area results:
+```{r}
+figure_called <- paste0("(", figure_path, "/LULCPaper_Results.jpg)")
+```
+
+![]`r figure_called`
+
+Figure zoomed:
+```{r}
+figure_called <- paste0("(", figure_path, "/LULCPaper_ResultsZoomed.jpg)")
+```
+
+![]`r figure_called`
+
+Table overall accuracies and Kappa:
+
+```{r}
+todisplay <- bb[c(2,3,1),]
+FMTD_KABLE(as.data.frame(todisplay), rownames_bool = TRUE, digits_arg = 2)
+```
+
+Table of producer's accuracies:
+
+```{r results="asis"}
+FMTD_KABLE(prod_all)
+```
+
+Table of user's accuracies:
+
+```{r results="asis"}
+FMTD_KABLE(user_all)
+```
+
+In the following chunks, bar charts are computed and aggregated in a plot frame. First, the dodged bar chart.
+
+```{r results = "hide"}
+acc_df[, 1]     <- as.factor(acc_df[, 1])
+acc_df[, 2]     <- as.factor(acc_df[, 2])
+cbPalette       <- c("#CCCCCC", "#999999", "#666666")
+acc_df$Area_km2 <- LURE_xls_df$Area_km2 
+
+gg_area <- ggplot(data = acc_df[, -c(3, 4)], aes(x = LULC, y = Area_km2, fill = Technique)) +
+  theme(panel.background = element_rect(fill = "#FFFFCC", colour = 'white' )) +
+  theme(plot.background = element_rect(colour = 'black')) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  scale_fill_manual(values=cbPalette) +
+  labs(x = "LULC", y = expression("Area in km"^2)) +
+  theme(axis.text=element_text(size=10), axis.title=element_text(size=12)) +
+  coord_flip() +
+  scale_x_discrete(labels=c("1" = "bare land", "2" = "farmland", "3" = "forest", "4" = "settlement", "5" = "snow", "6" = "water" ))
+
+gg_area
+```
+
+Then, we produce the stacked bar chart.
+
+```{r results= "hide"}
+cbPalette                <- c("#CC9900", "#66FF33", "#336600", "#FF3333", "#CCFFFF", "#003399")
+RGB_m                    <- col2rgb(cbPalette, alpha = FALSE)
+acc_df$Relative_Area_km2 <- acc_df$Area_km2 / sum(acc_df$Area_km2[1:6]) * 100 
+levels(acc_df$LULC)      <- c("bare land", "farmland", "forest", "settlement", "snow", "water")
+
+gg_stacked <- ggplot(data = acc_df[, -c(3, 4)], aes(x = Technique , y = Relative_Area_km2, fill = LULC)) + 
+  theme(plot.background = element_rect(colour = 'black')) + 
+  geom_bar(stat="identity") +
+  scale_fill_manual(values=cbPalette) + 
+  labs(x = "Classification technique", y = "Area of LULC type in % of total classified area") + 
+  theme(axis.text=element_text(size=10), axis.title=element_text(size=12))
+gg_stacked
+```
+
+To produce these bar charts:
+```{r fig.keep = "last", fig.height= 4, fig.width=8, results="asis"}
+MULTIPLOT(plotlist = list(gg_area, gg_stacked), cols = 2)
+```
+
+Then we prepare tables that are shwon in the paper.
+```{r}
+aaa <- acc_df[acc_df$Technique %in% "CART", ]
+aaa <- aaa[order(aaa$Relative_Area_km2), ]
+
+bbb <- acc_df[acc_df$Technique %in% "MaxEnt", ]
+bbb <- bbb[order(bbb$Relative_Area_km2), ]
+
+ccc <- acc_df[acc_df$Technique %in% "RF", ]
+ccc <- ccc[order(ccc$Relative_Area_km2), ]
+```
+
+Split of classified land-cover for CART: 
+```{r}
+FMTD_KABLE(aaa)
+```
+
+Split of classified land-cover for MaxEnt: 
+```{r}
+FMTD_KABLE(bbb)
+```
+
+Split of classified land-cover for RF: 
+```{r}
+FMTD_KABLE(ccc)
+```
+
+Finally, we have the results related to Kappa statistics as well as the RGB colours of LULC classes:
+```{r}
+FMTD_KABLE(as.data.frame(Kappa_res))
+FMTD_KABLE(RGB_m)
+```
+
+### GLMs - introduction
+
+The input data is:
+
+```{r results="hide"}
+SPLT_xls_df   
+REGR_xls_df    
+GCP_xls_df      
+```
+
+An excerpt of the table is computed here.
+```{r}
+
+notprinted1 <- FMTD_KABLE(REGR_xls_df[REGR_xls_df$Topography %in% c("High el.", "Medium el.", "Low el."), colnames(REGR_xls_df) %in% c("LULC", "Technique", "Topography", "User_acc", "Prod_acc")])
+
+notprinted2 <- FMTD_KABLE(REGR_xls_df[REGR_xls_df$Topography %in% c("High sl.", "Medium sl.", "Low sl."), colnames(REGR_xls_df) %in% c("LULC", "Technique", "Topography", "User_acc", "Prod_acc")])
+```
+
+Upper thresholds of categories of topography are shown in the following table:
+```{r}
+aa            <- SPLT_xls_df[-c(4),]
+aa$Statistics <- c("High","Medium", "Low"  )
+colnames(aa) <- c("Ceiling of category", "Elevation [m]", "Slope [degree]")
+FMTD_KABLE(aa)
+```
+
+The following GLM was used for four cases, i.e., the four combinations of $y$ (that represents the log of adusted (1) producer's accuracies and (2) user's accuracies) and $topo$ (that represents (1) elevation categories and (2) slope categories):
+
+$y = \beta_{0} +\beta_{1}\cdot LULC + \beta_{2}\cdot topo + \beta_{3}\cdot technique + \beta_{4}\cdot (technique\cdot LULC) + \beta_{5}\cdot (technique \cdot topo) + \epsilon$
+
+In all four cases, there are no significant coefficients. Hence we re-fit the smaller model without the interaction terms to assess the significance of main effects:
+
+$y = \beta_{0} +\beta_{1}\cdot LULC + \beta_{2}\cdot topo + \beta_{3}\cdot technique + \epsilon$
+
+
+```{r}
+# We prepare the data ----------------------
+
+all_data <- READ_EXCEL("D084_REGR.ID", input_path)
+all_data <- all_data[ ,!colnames(all_data) %in% c("Overall_acc")]
+all_data <- mutate(all_data, LULC = factor(LULC, labels=c("Bare Land", 
+                   "Farmland", "Forest", "Settlement", "Snow", "Water")))
+## Drop the "All" category and set Technique as factors
+all_data <- filter(all_data, Topography != "All") %>% 
+  mutate(Technique = as.factor(Technique)) 
+
+## "Start" the counts, and take log-odds of adjusted accuracy
+
+# Dataset for production accuracy, elevation data
+prod_acc_el_data <- dplyr::select(all_data, 1:3, 5, 7) %>%
+  filter(!is.na(Prod_acc), str_detect(Topography, " el.$")) %>% 
+  mutate(Topography = as.factor(Topography),
+         prod_count_correct = round(Prod_acc * Prod_count),
+         adj_acc = (prod_count_correct + 1/6)/(Prod_count + 1/3),
+         l_adj_acc = log(adj_acc/(1-adj_acc)))
+
+# Dataset for production accuracy, slope data
+prod_acc_sl_data <- dplyr::select(all_data, 1:3, 5, 7) %>%
+  filter(!is.na(Prod_acc), str_detect(Topography, " sl.$")) %>% 
+  mutate(Topography = as.factor(Topography),
+         prod_count_correct = round(Prod_acc * Prod_count),
+         adj_acc = (prod_count_correct + 1/6)/(Prod_count + 1/3),
+         l_adj_acc = log(adj_acc/(1-adj_acc)))
+
+# Dataset for user accuracy, elevation data
+user_acc_el_data <- dplyr::select(all_data, 1:3, 4, 6) %>% 
+  filter(!is.na(User_acc), str_detect(Topography, " el.$")) %>% 
+  mutate(Topography = as.factor(Topography),
+         user_count_correct = round(User_acc * User_count),
+         adj_acc = (user_count_correct + 1/6)/(User_count + 1/3),
+         l_adj_acc = log(adj_acc/(1-adj_acc)))
+
+# Dataset for user accuracy, slope data
+user_acc_sl_data <- dplyr::select(all_data, 1:3, 4, 6) %>% 
+  filter(!is.na(User_acc), str_detect(Topography, " sl.$")) %>% 
+  mutate(Topography = as.factor(Topography),
+         user_count_correct = round(User_acc * User_count),
+         adj_acc = (user_count_correct + 1/6)/(User_count + 1/3),
+         l_adj_acc = log(adj_acc/(1-adj_acc)))
+```
+
+Now that the data are ready, we produce various GLMs, for slope categories and elevation categories separately, and plot them for:
+
+- First producer's accuracies (both GLMs, i.e., first with interactions terms and then main effects only), 
+- And then user's accuracies (both GLMs, i.e., first with interactions terms and then main effects only). 
+
+### GLMs: producer's accuracies
+
+```{r interaction_terms}
+# GLM with interaction terms - Producer's accuracy ----------------
+
+lm_prod_el_inter      <- lm(formula = l_adj_acc  ~ Technique*Topography + Technique*LULC, data = prod_acc_el_data)
+lm_prod_el_inter_coef <- as.data.frame(summary(lm_prod_el_inter)$coefficients) %>% 
+  mutate(effect = rownames(summary(lm_prod_el_inter)$coefficients), adj.p = p.adjust(`Pr(>|t|)`, "BY")) %>% 
+  arrange(adj.p) %>% 
+  filter(adj.p < 0.05)
+
+lm_prod_sl_inter      <- lm(formula = l_adj_acc  ~ Technique*Topography + Technique*LULC, data = prod_acc_sl_data)
+lm_prod_sl_inter_coef <- as.data.frame(summary(lm_prod_sl_inter)$coefficients) %>% 
+  mutate(effect = rownames(summary(lm_prod_sl_inter)$coefficients), adj.p = p.adjust(`Pr(>|t|)`, "BY")) %>% 
+  arrange(adj.p) %>% 
+  filter(adj.p < 0.05)
+```
+
+```{r main_effects}
+# GLM as simple linear model - Producer's accuracy ------------------------
+
+lm_prod_el_main      <- lm(formula = l_adj_acc  ~ Technique + Topography + LULC, data = prod_acc_el_data)
+lm_prod_el_main_coef <- as.data.frame(summary(lm_prod_el_main)$coefficients) %>% 
+  mutate(effect = rownames(summary(lm_prod_el_main)$coefficients), adj.p = p.adjust(`Pr(>|t|)`, "BY")) %>% 
+  arrange(adj.p) %>% filter(adj.p < 0.05)
+
+lm_prod_sl_main      <- lm(formula = l_adj_acc  ~ Technique + Topography + LULC,data = prod_acc_sl_data)
+lm_prod_sl_main_coef <- as.data.frame(summary(lm_prod_sl_main)$coefficients) %>% 
+  mutate(effect = rownames(summary(lm_prod_sl_main)$coefficients), adj.p = p.adjust(`Pr(>|t|)`, "BY")) %>% 
+  arrange(adj.p) %>% filter(adj.p < 0.05)
+```
+
+There is no significance in the GLM with interaction terms. After the adjustments for multiple testing in the simple linear model, we find that, for producer's accuracy, only the LULC type is significant when adjusting for either slope or elevation. As such, the three ML techniques do not provide significantly different accuracies when adjusting for either elevation or slope. In both cases (slope or elevation), the producer accuracies for Forest and Snow are significantly higher than for other categories of LULC.
+
+We prepare the plots that is a part of a single plot frame (see below). 
+
+```{r}
+# Plot for producer's accuracy  with adustement for elevation ---------------------
+p_Tech <- levels(all_data$Technique)
+p_LULC <- levels(all_data$LULC)
+pred_df <- expand.grid(p_Tech, p_LULC)
+names(pred_df) <- c("Technique", "LULC")
+pred_df$Topography <- factor("Low el.", levels=unique(prod_acc_el_data$Topography))
+tmp <- predict(lm_prod_el_main, pred_df)
+pred_prod_el <- pred_df
+pred_prod_el$fitt_ac <- tmp
+pred_prod_el <- mutate(pred_prod_el, 
+                       LULC=factor(LULC,levels=c("Bare Land", "Settlement", "Water", "Farmland", "Forest", "Snow")),
+                       fitt_prob = exp(fitt_ac)/(1+ exp(fitt_ac)))
+probs_2_plot <- sprintf("%.2f", exp(c(0,2,4))/(1 + exp(c(0,2,4))))
+prod_el_plot <- ggplot(pred_prod_el) + 
+                geom_point(mapping=aes(x=Technique, y=fitt_ac), col="blue") +
+                ylab("Estimated Accuracies") + labs(title="Producer\'s accuracy (Elevation) (A)") + 
+                coord_cartesian(ylim=c(-1,6)) + 
+                facet_wrap( ~ LULC) + 
+                scale_y_continuous(breaks=c(0,2,4), labels=probs_2_plot) +
+                theme(axis.text.x=element_text(angle=45, hjust=1))
+```
+
+```{r}
+# Plot for producer's accuracy  with adustement for slope ---------------------
+p_Tech <- levels(all_data$Technique)
+p_LULC <- levels(all_data$LULC)
+pred_df <- expand.grid(p_Tech, p_LULC)
+names(pred_df) <- c("Technique", "LULC")
+pred_df$Topography <- factor("Low sl.", levels=unique(prod_acc_sl_data$Topography))
+tmp <- predict(lm_prod_sl_main, pred_df)
+pred_prod_sl <- pred_df
+pred_prod_sl$fitt_ac <- tmp
+pred_prod_sl <- mutate(pred_prod_sl, LULC=factor(LULC, 
+                       levels=c("Bare Land", "Settlement", "Water", "Farmland", "Forest", "Snow")),
+                       fitt_prob = exp(fitt_ac)/(1+ exp(fitt_ac)))
+prod_sl_plot <- ggplot(pred_prod_sl) + 
+                geom_point(mapping=aes(x=Technique, y=fitt_ac), col="blue") +
+                ylab("Estimated Accuracies") + 
+                labs(title="Producer\'s accuracy (Slope) (B)") + 
+                coord_cartesian(ylim=c(-1,6)) + 
+                facet_wrap( ~ LULC) + 
+                scale_y_continuous(breaks=c(0,2,4), labels=probs_2_plot) +
+                theme(axis.text.x=element_text(angle=45, hjust=1))
+```
+
+Multiplot of fitted producer's accuracies:
+```{r, fig.height= 5, fig.width=10}
+MULTIPLOT(plotlist = list(prod_el_plot, prod_sl_plot), cols = 2)
+```
+
+### GLMs: user's accuracies
+
+```{r interaction_terms_user}
+# GLM with interaction terms - User's accuracy ----------------
+
+lm_user_el_inter      <- lm(formula = l_adj_acc  ~ Technique*Topography + Technique*LULC, data = user_acc_el_data)
+lm_user_el_inter_coef <- as.data.frame(summary(lm_user_el_inter)$coefficients) %>% 
+  mutate(effect = rownames(summary(lm_user_el_inter)$coefficients), adj.p = p.adjust(`Pr(>|t|)`, "BY")) %>% 
+  arrange(adj.p) %>% 
+  filter(adj.p < 0.05)
+
+lm_prod_sl_inter      <- lm(formula = l_adj_acc  ~ Technique*Topography + Technique*LULC, data = prod_acc_sl_data)
+lm_prod_sl_inter_coef <- as.data.frame(summary(lm_prod_sl_inter)$coefficients) %>% 
+  mutate(effect = rownames(summary(lm_prod_sl_inter)$coefficients), adj.p = p.adjust(`Pr(>|t|)`, "BY")) %>% 
+  arrange(adj.p) %>% 
+  filter(adj.p < 0.05)
+```
+
+Again, in both cases, there are no significant effects. Hence we re-fit the smaller model, without the interaction terms and assess significance of main effects.
+
+```{r main_effects_user}
+# GLM as Simple linear model - User's accuracy ------------------------
+
+# Elevation
+lm_user_el_main      <- lm(formula = l_adj_acc  ~ Technique + Topography + LULC, data = user_acc_el_data)
+lm_user_el_main_coef <- as.data.frame(summary(lm_user_el_main)$coefficients) %>% 
+  mutate(effect = rownames(summary(lm_user_el_main)$coefficients), adj.p = p.adjust(`Pr(>|t|)`, "BY")) %>% 
+  arrange(adj.p) %>% 
+  filter(adj.p < 0.05)
+# Overall significance of LULC:
+lm_user_el_main2     <- lm(formula = l_adj_acc  ~ Technique + Topography, data = user_acc_el_data)
+aa                   <- anova(lm_user_el_main2, lm_user_el_main)
+
+#Slope
+lm_user_sl_main      <- lm(formula = l_adj_acc  ~ Technique + Topography + LULC, data = user_acc_sl_data)
+lm_user_sl_main_coef <- as.data.frame(summary(lm_user_sl_main)$coefficients) %>% 
+  mutate(effect = rownames(summary(lm_user_sl_main)$coefficients), adj.p = p.adjust(`Pr(>|t|)`, "BY")) %>% 
+  arrange(adj.p) %>% 
+  filter(adj.p < 0.05)
+# Overall significance of LULC:
+lm_user_sl_main2     <- lm(formula = l_adj_acc  ~ Technique + Topography, data = user_acc_sl_data)
+bb                   <- try(anova(lm_user_sl_main2, lm_user_el_main), silent = TRUE)
+```
+
+As for the simple linear model fitted to the producer's accuracies, the significant terms in the simple linear model fitte to the user's accuracies are LULC Forest and Snow. 
+
+We plot for a plot frame below.
+
+```{r}
+# Plot for user's accuracy  with adustement for elevation ---------------------
+p_Tech <- levels(all_data$Technique)
+p_LULC <- levels(all_data$LULC)
+pred_df <- expand.grid(p_Tech, p_LULC)
+names(pred_df) <- c("Technique", "LULC")
+pred_df$Topography <- factor("Low el.", levels=unique(prod_acc_el_data$Topography))
+tmp <- predict(lm_user_el_main, pred_df)
+pred_user_el <- pred_df
+pred_user_el$fitt_ac <- tmp
+pred_user_el <- mutate(pred_user_el, 
+                       LULC=factor(LULC, levels=c("Bare Land", "Settlement", "Water", "Farmland", "Forest", "Snow")),
+                       fitt_prob = exp(fitt_ac)/(1+ exp(fitt_ac)))
+user_el_plot <-   ggplot(pred_user_el) + 
+                  geom_point(mapping=aes(x=Technique, y=fitt_ac), col="blue") +
+                  ylab("Estimated Accuracies") + 
+                  labs(title="User\'s accuracy (Elevation) (A)") + 
+                  coord_cartesian(ylim=c(-1,6)) + 
+                  facet_wrap( ~ LULC) + 
+                  scale_y_continuous(breaks=c(0,2,4), labels=probs_2_plot) +
+                  theme(axis.text.x=element_text(angle=45, hjust=1))
+```
+
+```{r}
+# Plot for user's accuracy  with adustement for slope --------------------------------------------
+p_Tech <- levels(all_data$Technique)
+p_LULC <- levels(all_data$LULC)
+pred_df <- expand.grid(p_Tech, p_LULC)
+names(pred_df) <- c("Technique", "LULC")
+pred_df$Topography <- factor("Low sl.", levels=unique(user_acc_sl_data$Topography))
+tmp <- predict(lm_user_sl_main, pred_df)
+pred_user_sl <- pred_df
+pred_user_sl$fitt_ac <- tmp
+pred_user_sl <- mutate(pred_user_sl, LULC=factor(LULC, 
+                       levels=c("Bare Land", "Settlement", "Water", "Farmland", "Forest", "Snow")), 
+                       fitt_prob = exp(fitt_ac)/(1+ exp(fitt_ac)))
+user_sl_plot <-   ggplot(pred_user_sl) +   
+                  geom_point(mapping=aes(x=Technique, y=fitt_ac), col="blue") +
+                  ylab("Estimated Accuracies") + labs(title="User\'s accuracy (Slope) (B)") + 
+                  coord_cartesian(ylim=c(-1,6)) + 
+                  facet_wrap( ~ LULC) + 
+                  scale_y_continuous(breaks=c(0,2,4), labels=probs_2_plot) +
+                  theme(axis.text.x=element_text(angle=45, hjust=1))
+```
+
+Multiplot of fitted user's accuracies:
+```{r, fig.height= 5, fig.width=10}
+MULTIPLOT(plotlist = list(user_el_plot, user_sl_plot), cols = 2)
+```
+
+### Comparison with prior studies
+
+We need these data:
+```{r results="hide"}
+COMP_xls_df
+```
+
+```{r Mean_prod_acc}
+prod_comp <- prod_all
+prod_comp$Udin <- COMP_xls_df[COMP_xls_df$Author =="Uddin" & COMP_xls_df$Mean_accuracy =="Prod", colnames(COMP_xls_df) == "Value"]
+prod_comp$Xue <- COMP_xls_df[COMP_xls_df$Author =="Xue" & COMP_xls_df$Mean_accuracy =="Prod", colnames(COMP_xls_df) == "Value"]
+prod_comp <- prod_comp[, -c(2,3)]
+colnames(prod_comp)[c(2,3,4)] <- c("This work (Random Forest)", "(Uddin et al., 2015)", "(Xue et al., 2017)")
+```
+
+```{r Mean_user_acc}
+user_comp <- user_all
+user_comp$Udin <- COMP_xls_df[COMP_xls_df$Author =="Uddin" & COMP_xls_df$Mean_accuracy =="User", colnames(COMP_xls_df) == "Value"]
+user_comp$Xue <- COMP_xls_df[COMP_xls_df$Author =="Xue" & COMP_xls_df$Mean_accuracy =="User", colnames(COMP_xls_df) == "Value"]
+user_comp <- user_comp[, -c(2,3)]
+colnames(user_comp)[c(2,3,4)] <- c("This work (Random Forest)", "(Uddin et al., 2015)", "(Xue et al., 2017)")
+```
+
+Table of comparison with prior studies for producer's accuracies:
+```{r}
+FMTD_KABLE(prod_comp)
+```
+
+Table of comparison with prior studies for user's accuracies:
+```{r}
+FMTD_KABLE(user_comp)
+```
+
+Table of elevation as median and upper limits:
+```{r}
+LULC_E01_r       <- crop(LULC_r, E01_crop_extent, snap="out")
+filled_dem_E01_r <- crop(filled_E99_dem_r, E01_crop_extent, snap="out")
+FIX_PROJ_R(LULC_E01_r, filled_dem_E01_r)
+
+range_el_m <- c()
+for (i in 1:6){
+  aa_r          <- filled_dem_E01_r
+  index_v       <- !LULC_E01_r[] == i
+  aa_r[index_v] <- NA
+  range_el_m    <- rbind(range_el_m, quantile(aa_r[], na.rm =TRUE, probs = c(0.5, 0.99)))
+}
+
+range_el_df           <- data.frame(range_el_m)
+colnames(range_el_df) <- c("Median elevation [m]", "Upper elevation limit [m]")
+rownames(range_el_df) <- LULC_v
+up_forest <- range_el_df[3, 2]
+up_farmland <- range_el_df[2, 2]
+
+FMTD_KABLE(range_el_df, digits_args = 0, rownames_bool = TRUE)
+```
+
+## Preparation of selected LULC raster (ArcGIS)
+
+Before working on ArcGIS steps, let's see the latest date of update of the selected LULC raster layer (which is the selected_LULC.tif in the instructions below):
+
+```{r}
+last_modification_time <- file.info(paste0(LULC_path, "/011_Results_tif/Selected"), extra_cols = FALSE)$mtime
+last_modification_time <- as.character(read.table(text = as.character(last_modification_time[1]), sep = " ")[1, 1])
+```
+
+The folder was modified the last time on `r last_modification_time`. 
+
+We proceed with the following steps on ArcGIS:
+    
+1. Arctoolbox - Project Raster (Data management)
+    + Input: selected_LULC.tif
+    + Output coordinate system: GCS_WGS_1984
+    + Resampling technique: NEAREST
+    + Output cell size: leave empty
+    + Output: unsampled_LULC.tif
+
+2. Arctoolbox - Resample (Data management)
+    + Input raster: unsampled_LULC.tif
+    + Output cell size: Same as E99_rivers_r_ArcGIS.tif in `r hydroanalysis_path`.
+    + Resampling technique: NEAREST
+    + Environments... Processing Extent: Extent: Same as E99_rivers_r_ArcGIS.tif
+    + Environments... Processing Extent: Snap raster: E99_rivers_r_ArcGIS.tif
+    + Output: LULC.tif
+
+3. We import the LULC to R and we crop to extent E01:
+
+```{r results="hide"}
+LULC_r
+if (whattodo) {
+LULC_E01_r <- crop(LULC_r, E01_crop_extent, snap="out")
+LULC_E01_r <- SAVEandOPEN_R(LULC_E01_r, output_path, "E01_LULC_r_OutR")
+FIX_PROJ_SHP(LULC_E01_r, filled_dem_r)
+}
+LULC_E01_r <- OPEN_R(output_path, "E01_LULC_r_OutR")
+```
+
+If plots are called, plots are rendered below:
+
+```{r}
+if (whattoplot) {
+  temp_r <- LULC_E01_r
+  col_v <- c("white", "brown", "lightgreen", "darkgreen", "red", "lightgrey", "blue")
+  plot(temp_r, col = col_v, legend = FALSE)
+  legend("bottomright", legend = c("Outside study area/No data", LULC_v), fill = col_v, cex = 0.5)
+}
+```
+
+
+# Asset module (data preparation): VDC ID raster
+
+The polygon data on the location of the VDC in the Koshi Basin was provided by Saurav Pradhananga and it should be available on ICIMOD's RDS database. The input data is:
+
+```{r results= "hide"}
+VDC_xls_df
+VDC_raw_shp
+```
+
+We generate a raster that provides the code of the VDCs.
+
+```{r time_consuming_6}
+if (whattodo){
+  # First, we correct the names of VDCs in the .shp file to match the names in the .xlsx file and merge the data. -------------------------
+  VDC_shp <- VDC_raw_shp
+  VDC_shp <- VDC_shp[VDC_shp$DISTRICT == "Sindhupalchok", "VDC_NAME"] 
+  colnames(VDC_shp@data)[which(colnames(VDC_shp@data)=="VDC_NAME")] <- "VDC_name"
+  
+  target <- c("Bhotang", "Thangpalkot", "Dhumthang", "Bhote Namlang", "Sipal Kavre", "Syaule Bazar", "Maneswnara", "Pipaldanda", "Chautara","Chokati", "Dhuskun", "Fulpingdanda", "Thulo Sirubari","Thum Pakhar", "Thulo Pakhar")
+  inds <- which(VDC_shp$VDC_name %in% c("Motang", "Thanpalkot", "Dhuyang", "BhoteNamlang", "SipalKavre", "SyauleBazar", "Maneswor", "Pipaldada", "Choutara", "Choukati", "Ghuskun", "Fulpingdandagau", "ThuloSirubari", "ThumPakhar", "ThuloPakhar"))
+  VDC_shp$VDC_name <- replace(VDC_shp$VDC_name, inds, target)
+  VDC_shp@data <- left_join(VDC_shp@data, VDC_xls_df, by = "VDC_name" )
+  
+  # Then, we clip the VDC shapefile to the study area
+  VDC_shp <- crop(VDC_shp, study_area_shp)
+  
+  # We generate a raster that provides the code of the VDCs:
+  template_r <- LULC_E01_r
+  template_r[] <- NA
+  VDC_r <- rasterize(VDC_shp, template_r , field="VDC_ID", background=NA)
+  VDC_r <- SAVEandOPEN_R(VDC_r, output_path, "E01_VDC_r_OutR")
+  VDC_shp <- SAVEandOPEN_SHP(VDC_shp, output_path, "E01_VDC_pgshp_OutR")
+}
+
+VDC_r <- OPEN_R(output_path, "E01_VDC_r_OutR")
+VDC_shp <- OPEN_SHP(output_path, "E01_VDC_pgshp_OutR")
+```
+
+# Asset module: rasters
+
+## HPP rasters
+
+### Polygons of HPPs lease areas
+
+In this section, we build polygons of HPPs in the study area.
+
+The input data are:
+
+```{r results="hide"}
+HPP_xls_df
+SHPP_xls_df
+```
+
+We first import data retrieved from the Ministry of Energy's Department of Electricity Development (DoED) in January 2017 ([click here for link](http://www.doed.gov.np/list_of_applications.php)). 
+
+Then we do the following (on R except if otherwise explicitely mentioned):
+
+1. We pre-process the data: 
+    - We discard the data for which no coordinates are available or coordinates are obviously erroneous (e.g., 0'000'000). 
+    - We rename some entries
+    - We remove duplicates
+2. We transform the dataset into an object of type SpatialDataFrame.
+3. We select HPP lease plots that satisfy three critera (R and ArcGIS):
+    - the plots are in riparian areas of the seven river reaches in scope
+    - HPPs have installed capacity > 1 MW.
+    - Visual criterion on ArcGIS
+4. We exclude the Government of Nepal's reserved HPP area for the project "Sunkoshi 3 HPP" of 536 MW because of its removal from the lists of the DoED's website as per June 2017. 
+
+```{r}
+if (whattodo) {
+  
+  # Step 1 ------------------------------------
+  HPP_xls_df <- HPP_xls_df[which(HPP_xls_df$y_N_min!=-9999),]
+  
+  HPP_xls_df$y_N_min <- as.numeric(HPP_xls_df$y_N_min)
+  HPP_xls_df$y_N_max <- as.numeric(HPP_xls_df$y_N_max)
+  HPP_xls_df$x_E_min <- as.numeric(HPP_xls_df$x_E_min)
+  HPP_xls_df$x_E_max <- as.numeric(HPP_xls_df$x_E_max)
+  
+  if (min(HPP_xls_df[,c("y_N_min", "y_N_max")]) < 26|
+      + max(HPP_xls_df[,c("y_N_min", "y_N_max")]) > 31.5 |
+      + min (HPP_xls_df[,c("x_E_min", "x_E_max")]) < 80|
+      + max (HPP_xls_df[,c("x_E_min", "x_E_max")]) > 90) {
+    msgBox("The x and y indicate locations outside: y = [26, 31.5] and x = [80, 90]")
+  }
+  
+  select_v <- c("HPP_ID", "Project_name", "Megawatt", "River","Status", "Status_step", "y_N_min", "y_N_max", "x_E_min", "x_E_max", "Note") 
+  HPP_xls_df <- HPP_xls_df [,select_v] 
+  
+  HPP_xls_df$River <- replace(HPP_xls_df$River, HPP_xls_df$River %in% c("Chaku"), "Chaku River")
+  HPP_xls_df$River <- replace(HPP_xls_df$River, HPP_xls_df$River %in% c("Balephi"), "Balephi River")
+  HPP_xls_df$River <- replace(HPP_xls_df$River, HPP_xls_df$River %in% c("Sun Koshi"), "Sunkoshi")
+  HPP_xls_df$River <- replace(HPP_xls_df$River, HPP_xls_df$River %in% c("Bhote koshi", "Bhote Koshi"), "Bothekoshi") 
+  
+  duplicate_v <- c("Duplicated", "Duplicated: previously GoN reserved")
+  HPP_xls_df <- HPP_xls_df[!HPP_xls_df$Note %in% duplicate_v, ]
+  
+  HPP_coord <- HPP_xls_df[,c("y_N_min", "y_N_max", "x_E_min", "x_E_max")]
+  row.names(HPP_xls_df) = as.character(1:dim(HPP_xls_df)[1])
+  
+  # Step 2 --------------------------------------
+  
+  #Create matrix for coordinates HPP
+  l <- list()
+  for (i in 1:dim(HPP_xls_df)[1]) {
+    xy_mat <- XYM(HPP_coord[i,])
+    poly_list <- list(Polygon(xy_mat))# Create a polygon class object
+    poly_s <- Polygons(poly_list,i) 
+    l[i] <- list(poly_s) # Prepare a list to create the spatial polygon
+  }
+  
+  # Create SpatialPolygonsDataFrame
+  sps <- SpatialPolygons(l)
+  proj4string(sps) = CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0") # add CSR
+  spdf_shp = SpatialPolygonsDataFrame(sps,HPP_xls_df)
+  colnames(spdf_shp@data)
+  
+  # Step 3 ------------------------------------
+  
+  # We keep HPPs with capacity > 1MW and in riparian areas.
+  river_temp_shp <- gLineMerge(rivers_split_shp, byid = FALSE)
+  river_temp_shp <- SpatialLinesDataFrame(river_temp_shp, data=as.data.frame(NA)) 
+  index_v <- gIntersects(river_temp_shp, spdf_shp, byid =TRUE)
+  
+  HPP_select_shp<- spdf_shp[which(index_v==TRUE),] 
+  HPP_select_shp <- HPP_select_shp[HPP_select_shp@data$Megawatt>1,]
+  HPP_select_shp@data$Itsct_1MW <- 1
+  
+  # After exclusion of some HPPs on ArcGIS thanks to visual inspection, we produce the table in SHPP_xls_df
+  HPP_select_shp <- HPP_select_shp[HPP_select_shp$HPP_ID %in% SHPP_xls_df$HPP_ID,]
+  select_v <- c("HPP_ID", "Megawatt", "Status", "Status_step")
+  HPP_select_shp@data <- left_join(HPP_select_shp@data[, select_v],SHPP_xls_df ,  by="HPP_ID")
+  HPP_select_shp@data$Selected_in_study_area <- 1
+  
+  # Step 4 --------------------------------------------
+
+  options(warn=-1)
+  HPP_select_shp <- SAVEandOPEN_SHP(HPP_select_shp, output_path, "E99_HPP_selected_pgshp_OutR")
+  options(warn=0)
+}
+
+HPP_select_shp <- OPEN_SHP(output_path, "E99_HPP_selected_pgshp_OutR")
+```
+
+### Location of infrastructures of HPP on lease plot
+
+We assume that the assets of an HPP are split into three categories:
+
+- Category headwork (HW): headwork's civil structure, headrace canal, settling basin, gravel trap and gravel flushing canal
+- Category powerhouse (PH): equipment in powerhouse (incl. turbines, generators, transformers), powerhouse civil structure, tailrace canal
+- Category other: e.g., penstock, land acquisition, transmission towers, VAT, physical contingencies 
+
+The category other is not assigned a location because this includes exposure that is either non-physical (e.g.VAT and physical contingencies) or difficult to locate (e.g., penstock). The category HW and the category PH are modelled as points. The locations of these points are determined as follows:
+
+- For existing projects, the coordinates of the actual headwork and actual powerhouse were measured on the field with a Garmin OREGON 650 GPS device. 
+- For planned projects and both categories HP and HW, the selection was done visually within a buffer of 10-40 m from the river polylines on ArcGIS.  
+
+These coordinates are saved in a table file, of which we see an excerpt:
+
+```{r}
+select_col <- c("HPP_name", "lat_HW", "long_HW", "lat_PH", "long_PH", "info_source")
+FMTD_KABLE(as.data.frame(head(SHPP_xls_df[, colnames(SHPP_xls_df) %in% select_col], n = 10)), digits_args = 3 )
+```
+
+### HPP rasters
+
+The output in this step are four rasters: 
+
+- Low-exposure scenario: 
+    - A raster of value of infrastructure of existing HPPs
+    - For the same HPPs, a raster of two years of revenues from power generation
+- High-exposure scenario: 
+    - A raster of value of infrastructures of existing, in construction, and planned HPPs according to the Department of Electricity Development 
+    - For the same HPPs, a raster of two years of revenues from power generation
+
+The input data are the shapefile of polygons of HPP lease plots, the table that contains the location of HPP's infrastructure, and assumptions on the value of infrastructure from interview:
+
+```{r results="hide"}
+HPP_select_shp
+SHPP_xls_df
+# assumptions for assets
+percent_HW <- ASS_xls_df[3,5]
+percent_PH <- ASS_xls_df[4,5]
+cost_mioNPR_per_MW <- ASS_xls_df[5,5]
+# assumptions for revenues
+max_BI_duration <- ASS_xls_df[2,5]
+BI_pa_mioNPR_per_MW <- ASS_xls_df[6,5]
+cap_BI_HPP <- ASS_xls_df[7,5]
+```
+
+The value of infrastucture of an HPP is the product between an assumed unit cost per maximum power generation capacity of `r round(cost_mioNPR_per_MW,0)` million NPR per MW and a HPP's maximum power generation capacity. For an HPP, this value of infrastructure is then split between the category HW and the categoery PH. The value of business interruption for an HPP is the product between: an assumed annual unit revenue per maximum power generation capacity of `r round(BI_pa_mioNPR_per_MW,0)` million NPR per MW; an assumed maximum duration of business disruption of `r round(max_BI_duration,0)` years; and and a HPP's maximum power generation capacity. For an HPP, this value of business interruption is then split between the category HW and the categoery PH. 
+
+```{r}
+options(warn =  -1)
+
+# We convert the points from the dataframe to a .shp file for the category HW.
+points_shp <- SHPP_xls_df
+unselect_v <- c("lat_PH", "long_PH")
+points_HW_shp <- SHPP_xls_df[, !colnames(points_shp) %in% unselect_v]
+coordinates(points_HW_shp) = ~ long_HW + lat_HW
+proj4string(points_HW_shp) = CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+points_HW_shp$infrastructure <- "Headwork"
+points_HW_shp$value_mioNPR <- points_HW_shp$Megawatt * cost_mioNPR_per_MW * percent_HW
+points_HW_shp$BI_mioNPR <- points_HW_shp$Megawatt * BI_pa_mioNPR_per_MW * max_BI_duration * percent_HW/(percent_HW+percent_PH)
+
+#Then we convert the points from the dataframe to a .shp file for the category PH.
+unselect_v <- c("lat_HW", "long_HW")
+points_PH_shp <- SHPP_xls_df[, !colnames(points_shp) %in% unselect_v]
+coordinates(points_PH_shp) = ~ long_PH + lat_PH
+proj4string(points_PH_shp) = CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+points_PH_shp$infrastructure <- "Powerhouse"
+points_PH_shp$value_mioNPR <- points_PH_shp$Megawatt * cost_mioNPR_per_MW * percent_PH
+points_PH_shp$BI_mioNPR <- points_PH_shp$Megawatt * BI_pa_mioNPR_per_MW * max_BI_duration * percent_PH/(percent_HW+percent_PH)
+
+# We aggregate the data, and save and reopen as a .shp file:
+points_shp <- rbind(points_PH_shp, points_HW_shp)
+points_shp@bbox[] <- E02_crop_extent[1:4]
+HPP_points_shp <- points_shp
+SAVEandOPEN_SHP(HPP_points_shp[HPP_points_shp$infrastructure == "Powerhouse",], output_path, "E02_HPP Powerhouse_OutR")
+
+options(warn =  0)
+```
+
+We rasterise the values of assets and revenues for the low-exposure scenario and the high-exposure scenario.
+
+```{r}
+# We rasterize the values of the category HW and the category PH for the low-exposure scenario. 
+FIX_PROJ_SHP(HPP_points_shp, E02_ref_r)
+asset_HPP_2017_r <- rasterize(HPP_points_shp[HPP_points_shp$Status=="Operating",], 
+                              y = E02_ref_r, field = "value_mioNPR", background = NA)
+BI_HPP_2017_r    <- rasterize(HPP_points_shp[HPP_points_shp$Status=="Operating",], 
+                              y = E02_ref_r, field = "BI_mioNPR", background = NA)
+
+# We rasterize the values of the category HW and the category PH for the high-exposure scenario.
+FIX_PROJ_SHP(HPP_points_shp, E02_ref_r)
+asset_HPP_2030_r <- rasterize(HPP_points_shp, E02_ref_r, field = "value_mioNPR", background = NA)
+BI_HPP_2030_r    <- rasterize(HPP_points_shp, E02_ref_r, field = "BI_mioNPR", background = NA)
+
+# We put that in a list.
+asset_HPP_r_list <- list(asset_HPP_2017_r, asset_HPP_2030_r)
+BI_HPP_r_list <- list(BI_HPP_2017_r, BI_HPP_2030_r)
+```
+
+We look at the existing HPPs as per January 2017.
+
+```{r, include=FALSE}
+ff <- round(dim(HPP_points_shp)[1], 0) / 2
+aa <- HPP_points_shp[HPP_points_shp$Megawatt >1 & HPP_points_shp$infrastructure=="Powerhouse",]
+bb <- aa[aa$Status == "Operating",] 
+dd <- bb$HPP_name
+ee <- round(length(dd),0)
+```
+
+As per January 2017, the study area counts `r ee` existing HPPs of capacity >1 MW: `r PASTE_INTEXT(dd)`. In addition, as per the same date, the study area counts `r ff` HPP's plots either for which there is an application or an issuance of licence for surveys or power generation or that are reserved for the Government of Nepal (i.e., this number represents the sum of existing and planned HPPs in the study area).
+
+If plots are called, plots are rendered below.
+
+```{r echo = FALSE, results = "hide"}
+if (whattoplot) {
+  plot(study_area_shp)
+  plot (rivers_split_shp, col = "blue", add=TRUE)
+  aa <- HPP_points_shp[HPP_points_shp$infrastructure=="Powerhouse" ,]
+  xxx <- gCentroid(aa, byid=TRUE)
+  plot(aa, add=TRUE, col="red")
+  text(xxx, aa$HPP_nam, cex = 0.5)
+}
+```
+
+## Road raster
+
+The output of this step is a road asset raster that contains for each pixel where a road exists the value of the road on that pixel. The input data are:
+
+```{r results="hide"}
+road_shp
+value_road_km     <- ASS_xls_df[8,5] # in mio NPR
+value_road_pixel  <- value_road_km *  30 / 1000
+BI_pa_mioNPR_road <- ASS_xls_df[10,5]
+min_BI_duration   <- ASS_xls_df[19,5]
+```
+
+Roads of the study area were digitised manually using ArcGIS Basemap.The digitisation was validated using GPS track measurements with a Garmin OREGON 650 GPS device. We assume the value of road per km to be `r round(value_road_km,0)` million NPR. 
+
+```{r time_consuming_7}
+FIX_PROJ_SHP(road_shp, E02_ref_r)
+if (whattodo) {
+  asset_road_r <- rasterize(road_shp, E02_ref_r, field = 1, background=NA)
+  asset_road_r <- asset_road_r * value_road_pixel
+  SAVEandOPEN_R(asset_road_r, output_path, "E02_asset_road_r_OutR")
+}
+
+asset_road_r <- OPEN_R(output_path, "E02_asset_road_r_OutR")
+```
+
+## Settlement rasters
+
+### Validation of assumption of household density
+
+We have the following input data:
+
+```{r results="hide"}
+cap_hh_per_pixel <- ASS_xls_df[12,5]
+VDC_r
+VDC_xls_df
+```
+
+We generate a raster that provides the code of the VDCs when the LULC recognises a settlement and we calculate the number of pixels with settlements per VDC.
+
+```{r}
+if (whattodo) {
+  VDC_hh_r <- LULC_E01_r
+  VDC_hh_r <- mask(VDC_hh_r, study_area_shp)
+  VDC_hh_r[VDC_hh_r[]!=4] <- NA 
+  VDC_hh_r[VDC_hh_r[]==4] <- VDC_r[VDC_hh_r[]==4]
+  
+  VDC_df                 <- data.frame(VDC_ID = VDC_hh_r[])
+  table_VDC_df           <- data.frame(table(VDC_df[]))
+  colnames(table_VDC_df) <- c("VDC_ID", "occurrence")
+  table_VDC_df[,1]       <- as.numeric(as.character(table_VDC_df[,1]))
+  bb                     <-left_join(table_VDC_df, VDC_xls_df, by = "VDC_ID") 
+  
+  bb$hh_per_pixel        <- round(bb$Household /bb$occurrence, 2)
+  quantile(bb$hh_per_pixel, probs=seq(0, 1, 0.1), na.rm=TRUE) # Quantile of density of HH per VDC
+  median(bb$hh_per_pixel)
+}
+```
+
+We see that the median number of households per pixel is 4.01. We therefore use a number of households per pixel of `r round(cap_hh_per_pixel, 0)`that aims at representing villages in riparian areas. In addition, field observations in the study area suggest that riparian villages are in average more densily populated and that scattered hamlets are in average less densily populated. 
+
+### Settlement rasters
+
+The input data are:
+
+```{r results="hide"}
+LULC_E01_r
+cap_hh_per_pixel
+value_house_2017 <- ASS_xls_df[13,5]
+value_house_2030 <- ASS_xls_df[16,5]
+```
+
+The output in this step are two rasters: 
+
+- For the low-exposure scenario, a raster of settlement value where an individual house is valued at `r round(value_house_2017,0)` million NPR.
+- For the high-exposure scenario, a raster of settlement value where an individual house is valued at `r round(value_house_2030,0)` million NPR.
+
+```{r time_consuming_8}
+if(whattodo){
+  settlement_r <- LULC_E01_r
+  settlement_r <- mask(settlement_r, study_area_shp)
+  settlement_r[settlement_r[]!=4] <- NA
+  settlement_r <- SAVEandOPEN_R(settlement_r, output_path, "E01_settlement_LULC_r_OutR")
+}
+
+settlement_r <- OPEN_R(output_path, "E01_settlement_LULC_r_OutR")
+
+asset_settlement_2017_r <- settlement_r 
+asset_settlement_2017_r[!is.na(asset_settlement_2017_r[])] <- cap_hh_per_pixel * value_house_2017
+asset_settlement_2017_r <- crop(asset_settlement_2017_r, E02_crop_extent,  snap="out")
+
+asset_settlement_2030_r <- settlement_r 
+asset_settlement_2030_r[!is.na(asset_settlement_2030_r[])] <- cap_hh_per_pixel * value_house_2030
+asset_settlement_2030_r <- crop(asset_settlement_2030_r, E02_crop_extent,  snap="out")
+
+asset_settlement_r_list <- list(asset_settlement_2017_r, asset_settlement_2030_r)
+```
+
+## Farmland raster
+
+### Parameters
+
+We calculate the average farmgate price per pixel (that is, the price the producer obtains from the first intermediary in the supply chain). For that, we sum over all crops (i.e., wheat, paddy, millet, and maize) the result of the product between the 2016/2017 farmgate price per crop in [NPR/kg], the relative area size of the crop in [%] and the crop productivity in [kg/m2].
+
+An excerpt of the input data is provided here:
+
+```{r}
+value_farmland_pixel <- ASS_xls_df[15,5]
+FMTD_KABLE(FML_xls_df)
+```
+
+We therefore have an assumed `r round(value_farmland_pixel, 3)` million NPR of value of crop at gate price per pixel. 
+
+### Farmland raster
+
+The input data is:
+
+```{r results="hide"}
+FX <- ASS_xls_df[18,5]
+LULC_E01_r 
+value_farmland_pixel
+value_farmland_km2_mio <- value_farmland_pixel / 900 * 10^6 # in million NPR
+value_farmland_km2_USD <- round(round(value_farmland_km2_mio, 1) * 10^6 / FX, 0)
+```
+
+The pixels of the LULC raster identified as farmland are selected and assigned the value of `r round(value_farmland_pixel, 3)` million NPR. This equals a gate price of crop of `r round(value_farmland_km2_mio, 1)` NPR per km^2^. 
+
+```{r time_consuming_9}
+if (whattodo) {
+  asset_farmland_r <- LULC_E01_r
+  asset_farmland_r <- mask(asset_farmland_r, study_area_shp)
+  asset_farmland_r[asset_farmland_r[]!=2] <- NA 
+  asset_farmland_r[asset_farmland_r[]==2] <- value_farmland_pixel 
+  asset_farmland_r <- crop(asset_farmland_r, E02_crop_extent,  snap="out")
+  asset_farmland_r <- SAVEandOPEN_R(asset_farmland_r, output_path, "E02_asset_farmland_r_OutR")
+}
+asset_farmland_r <- OPEN_R(output_path, "E02_asset_farmland_r_OutR")
+```
+
+# Aggregation module
+
+## Overview
+
+Three water-stage scenarios and two exposure scenarios make six combined scenarios. For each of these combined scenarios, random sampling is performed with `n sim` simulations to generate actual landslide rasters and realisations of Mean Damage Degree.
+
+An intermediary result of this module is, for each combined scenario, `r nsim` actual landslide rasters. The input data include: 
+
+- the rasters of possible landslide toes, 
+- the raster of toe weight, 
+- the flood rasters, 
+- the mean area of landslide, 
+- and the ratio of landslide count.
+
+The output data are direct and indirect damage (see explanation below).
+
+## Actual landslide rasters
+
+For a combined scenario, the count of potential landslides is equal to the sum of non-NA in the raster of possible landslide toes. This count is multiplied with the ratio of landslide count to obtain the parameter $\lambda$ of the Poisson distribution of the number of actual landslides incurred by floods $X$. For each realisation $x$ of $X$, a sample of size $x$ of the landslide's toes in the raster of possible landslide toes is taken. The sampling use the weights in the raster of toe weight. Finally, the landslides are built from the toes given the toe orientation and the mean area of landslides represented with `r round(count_pixel,0)` pixels. By assuming a Poisson distribution, the occurrences of landslides are assumed to be independent, that is, the occurrence of a landslide does not affect the occurrence of another landslide. The use of a Negative Binomial distribution (which arises when the data is believed to comes from a hierarchical model that is Gamma followed by Poisson) is dismissed, because of the scarcity of data for parameter estimation.  
+
+## Value of direct and indirect damage
+
+The exposure incurs direct economic damages, whereas consequences of direct damages are represented by indirect economic damages. 
+
+### Value of direct damages
+
+For each category of asset, only a part of the total exposure (i.e., pixels where both hazard and assets are identified) is affected by the hazards. This part is represented by a ratio that is called the percent of affected exposure (PAE). The affected exposure in turn might be partially damaged; the degree of damage to the affected exposure is called the mean damage degree (MDD). 
+
+```{r}
+PAE        <- ASS_xls_df[1, 5]
+beta_param <- c(ASS_xls_df[9, 5], ASS_xls_df[11, 5])
+```
+
+In a simulation, the direct damages for each category of assets are derived in four steps. First, the PAE is set at `r round(PAE*100,0)`% and determines the number $N$ of pixels of exposure that are affected by the hazard. Second, $N$ pixels of exposure are randomly selected with equal probability. Third, the MDD at each selected pixel is a random variable that follows a Beta distribution with $\alpha$ equal to `r round(beta_param[1],0)` and $\beta$ equal to `r round(beta_param[2],0)`. Finally, for each of the $N$ pixels, its value is multiplied with the MDD. These values are summed up over the $N$ pixels to obtain the value of direct damages for the category of assets. 
+
+### Choice of parameters for the Beta-distribution
+
+The pdf of the Beta distribution is rendered here if plots are called. 
+
+```{r}
+if (whattoplot){
+  x <- seq(0, 1, length=100)
+  y <- dbeta(x, 4, 4)
+  plot(x, y, type='l', main='Beta(4, 4) pdf')
+}
+```
+
+We set the Beta parameters given the following conditions:
+
+- The distribution is symmetric around its mean $E[X]$, which is equal to 0.5
+- The domain of the distribution is on [0,1]
+- It has a Bell-shape. We know that for a Normal distribution, $6 \sigma$ takes up almost all the pdf, so we equate this 
+to the upper bound (i.e., 1) to know that $\sigma$ should have this order of magnitude: $\sigma = 1/6 = 0.1667$.
+
+A Beta distribution has the following mean and variance:  
+$E[X] = \frac{\alpha}{\alpha + \beta}$ and 
+$var[X] = \frac{\alpha \beta}{(\alpha+\beta)^2(\alpha + \beta+1)}$ respectively. 
+
+We set the mean as $\alpha/ \beta = 0.5$. As such the variance is equal to 0.125, close enough to 0.1667.  
+
+### Value of indirect damages
+
+Indirect damages for the category of assets HPP are the loss of revenues because of business disruption, as direct damages cause either the slow-down of power generation or power outage. In a simulation, indirect damages to HPPs depend on the modelling of the direct damages to HPPs. For each pixel where direct damages to HPPs with a MDD higher than `r round(cap_BI_HPP*100,0)`% are modelled, indirect damages amount to the value of `r round(max_BI_duration,0)` years of revenues from power generation retrieved from the HPP revenue raster. If the MDD is equal to or lower than this threshold of `r round(cap_BI_HPP*100,0)`%, there are no indirect damages.  
+
+Indirect damages for the category of assets road is the loss of customs income, as roads are kept closed because of direct damages they have incurred. In a simulation, indirect damages to roads depend on the modelling of the direct damages to roads. For all six combinations of scenarios, the duration of road closure range between `r round(min_BI_duration,0)` years and `r round(max_BI_duration,0)` years. In a simulation, the duration of road closure is equal to:
+\[
+0.5 + \frac{(mean MDD across all road pixels in simulation - min MDD acros all simulations and scenarios) }{max MDD acros all simulations and scenarios - min MDD acros all simulations and scenarios} * 1.5 years
+\]
+This duration of road closure is multiplied with an annual customs income of `r round(BI_pa_mioNPR_road,0)` million NPR. These parameters come from interviews with members of the Armed Police Forces and villagers.  
+
+For the derivation of indirect damage assigned to settlements and agricultural fields, we have the following input data:
+```{r}
+x                       <- sum(VDC_xls_df$BI_road_HH * VDC_xls_df$Household)
+percent_road_business   <- ASS_xls_df[14, 5]
+y                       <- x * percent_road_business
+dd                      <- ASS_xls_df[17, 5]
+BI_pa_mioNPR_HH         <- dd/10^6 * 365 # per household per day, 2000 NPR of loss of income because of road closure according to interviews. 
+BI_pa_mioNPR_settlement <- y * BI_pa_mioNPR_HH
+```
+
+(Relevant for damage paper, regarding indirect damage to settlements) Indirect damages for the category of assets settlement are the loss of income for communities from business related to roads and customs (e.g., porters, food catering and lodging, revenues from trade of goods and services) as roads remain closed because of direct damages they have incurred. In a simulation, indirect damages to settlements depend on the duration of road closure in the same simulation (i.e., indirect damage to roads; see above) and the following assumptions: there are about `r round(x/100,0)*100` households located close to roads and customs; business related to roads and customs is the main source of income for `r round(percent_road_business *100,0)`% of these households, each household earning from these activities `r round(dd, 0)` NPR per day. These assumptions are grounded in interviews on the field with members of the Armed Police Forces and villagers. The duration of road closure is multiplied with the annual income of communities from business related to roads and customs of `r round(BI_pa_mioNPR_settlement,0)` million NPR.
+
+Last, indirect damages for the category of assets farmland are the loss of crop products because of long-term damages to agricultural fields caused by flood-waters. They are assumed to be twice the direct damage. 
+
+## Random sampling
+
+The input data are:
+```{r results="hide"}
+# hazards
+flood_r_l
+pot_toe_r_l
+weights_r_l
+# assets
+asset_HPP_r_list
+BI_HPP_r_list
+asset_road_r
+asset_settlement_r_list
+asset_farmland_r
+# other
+count_pixel
+lambda_percent
+```
+
+We prepare the list where the results of random sampling is saved.
+
+```{r}
+# define vectors
+valuation_v <- c("Expsre_PixelCount [count pixel]", 
+                 "Expsre_TotalValue [mio NPR]", 
+                 "DD_PixelCount [count pixel]",
+                 "DD_TotalValue [mio NPR]", 
+                 "ID_InYear [year]", 
+                 "ID_TotalValue [mio NPR]", 
+                 "IDandDD_TotalValue [mio NPR]")
+
+# define names of each 4 dimensions
+name1_v <- 1:nsim
+name2_v <- valuation_v
+name3_v <- c(elements_at_risk_v, "Total_ElementsAtRisk")
+name4_v <- paste(rep(round(qtles_v*100, 2), each=length(expo_scrio_v)), "%-quantile for ", expo_scrio_v, "-exposure scenario", sep = "")
+
+# construct array
+template_a                <- array(0,dim = c(length(name1_v), length(name2_v), length(name3_v) ))
+rownames(template_a)      <- name1_v
+colnames(template_a)      <- name2_v
+dimnames(template_a)[[3]] <- name3_v
+
+# construct list
+res_list        <- rep(list(template_a), length(name4_v))
+names(res_list) <- name4_v
+
+```
+
+We proceed with random sampling.
+
+```{r}
+if (whattodo){
+  
+  set.seed(123)
+  # For each flood scenario ---------------------------------------
+  for (j in 1:length(qtles_v)) {
+    # hazard rasters:
+    flood_r           <- flood_r_l[[j]]
+    masked_toe_1to8_r <- pot_toe_r_l[[j]]
+    weights_toes_r    <- weights_r_l[[j]]
+    # We generate the Raster of weights [0,1] of each possible flood-induced landslide toe. 
+    nc <- masked_toe_1to8_r@ncols
+    index_focal_list <- IND_LDSD(count_pixel, nc) # define the indexes for the landslides of size count_pixel
+    index_nonNA_v <- which(!is.na(masked_toe_1to8_r[]))
+    weights_v <- weights_toes_r[index_nonNA_v]
+    # We generate pseudo-random variables to count the number of landslides:
+    number_ldsd <- RPOIS_TRUNC(nsim, lambda_percent*length(weights_v), length(index_nonNA_v))
+    # We set a temporary array:
+    temp_a <- template_a 
+    
+    # Random sampling ---------------------------------------
+    for (i in 1:nsim) {
+      if(i %in% seq(1, nsim, nsim / 10)) (print(paste("Start run of random sampling ", i, " in water-stage scenario ", j, sep = "")))
+      # first, sampled landslides ---------------------------------
+      size <- number_ldsd[i]
+      sampled_index_ldsd_v <- sample(index_nonNA_v, size = size, prob = weights_v, replace = FALSE)
+      value_toe_v <- masked_toe_1to8_r[sampled_index_ldsd_v]
+      sampled_ldsd_r <- masked_toe_1to8_r
+      sampled_ldsd_r[] <- NA
+      temp_v <- c() 
+      for (k in 1:length(sampled_index_ldsd_v)) {
+            index_center <- sampled_index_ldsd_v[k]
+            value_toe <- value_toe_v[k]
+            index_focal <- index_center + index_focal_list[[value_toe]]
+            temp_v <- c(temp_v, index_focal)
+      }
+      sampled_ldsd_r[temp_v] <- 1
+      
+      # second, combine map of flood and the map of sampled landslide ----------------
+      hazard_r <- flood_r
+      index_replace_v <- which(is.na(hazard_r []) & !is.na(sampled_ldsd_r[]) | !is.na(hazard_r []))
+      hazard_r [index_replace_v] <- 1  
+      
+      # third, for each exposure scenario ----------------------------
+      hori_count <- 1 
+      for (m in 1: length(expo_scrio_v)){
+        temp_a[i,1:6,1] <- VALUATION_HPP_R(asset_HPP_r_list[[m]], hazard_r, PAE, beta_param, BI_HPP_r_list[[m]], max_BI_duration , cap_BI_HPP)
+        temp_a[i,1:6,2] <- VALUATION_ROAD_R(asset_road_r, hazard_r, PAE, beta_param, max_BI_duration, BI_pa_mioNPR_road, cap_BI_HPP)
+        temp_a[i,1:6,3] <- VALUATION_SETTLEMENT_R(asset_settlement_r_list[[m]], hazard_r, PAE, beta_param)
+        temp_a[i,1:6,4] <- VALUATION_FARMLAND_R(asset_farmland_r, hazard_r, PAE, beta_param)
+        res_list[[2*j - hori_count]][i,,] <- temp_a[i,,]
+        hori_count <- hori_count - 1
+      }
+    }
+  }
+  
+  # After loop: count of years
+  aa <- c()
+  for (q in 1:length(res_list)){
+    aa <- c(aa, res_list[[q]][,4,2])
+  }
+  DD_min <- min(aa)
+  DD_max <- max(aa)
+  COUNT_YEARS <- function(x){
+    min_BI_duration + (x - DD_min) / (DD_max - DD_min) * (max_BI_duration - min_BI_duration) # we assume that delta_actual_DD / delta_max_DD = delta_actual_year / delta_max_year
+  }
+  
+  # After loop: count of years and indirect damages for road and settlements; sum for all elements
+  for (q in 1:length(res_list)){
+    temp_a <- res_list[[q]]
+    temp_a[,5,2] <- COUNT_YEARS(temp_a[,4,2]) # count of year for road
+    temp_a[,5,3] <- temp_a[,5,2] # count of year for settlement
+    temp_a[,6,2] <- temp_a[,5,2] * BI_pa_mioNPR_road # value for road Indirect damages
+    temp_a[,6,3] <- temp_a[,5,3] * BI_pa_mioNPR_settlement # value for settlement Indirect damages
+    temp_a[,7,]  <- temp_a[,4,] + temp_a[,6,] # sum of damages (ID and DD)
+    temp_a[, ,5]  <- apply(temp_a,c(1,2), sum) # all elements
+    res_list[[q]] <- temp_a
+  }
+  
+  # After loop
+  res_df <- melt(res_list)
+  colnames(res_df) <- c("nsim", "ValueOf", "ElementAtRisk", "Value", "Scenario")
+  res_df <- res_df[, c("nsim", "ValueOf", "ElementAtRisk", "Scenario", "Value") ]
+  write.table(res_df, paste(result_path, "/Agg_results.xls", sep=""), sep="\t",row.names = FALSE)
+  saveRDS(res_df, paste(result_path, "/Agg_results.rds", sep="")) # As an alternative to:  write.table(res_df, paste(output_path, "/results", sep=""), sep="\t",row.names = FALSE)
+  }
+```
+
+# Vulnerability module
+
+## Preparation of VDC data
+
+The input data is:
+
+```{r, results="hide"}
+VDC_raw_shp
+study_area_shp
+```
+
+Then we do:
+
+```{r}
+if (whattodo){
+  # First, we correct the names of VDCs in the .shp file to match the names in the .xlsx file and merge the data. 
+  VDC_shp <- VDC_raw_shp
+  VDC_shp <- VDC_shp[VDC_shp$DISTRICT == "Sindhupalchok", "VDC_NAME"] 
+  colnames(VDC_shp@data)[which(colnames(VDC_shp@data)=="VDC_NAME")] <- "VDC_name"
+  
+  original <- c("Motang", "Thanpalkot", "Dhuyang", "BhoteNamlang", "SipalKavre", "SyauleBazar", "Maneswor", "Pipaldada", "Choutara", "Choukati", "Ghuskun", "Fulpingdandagau", "ThuloSirubari", "ThumPakhar", "ThuloPakhar")
+  target <- c("Bhotang", "Thangpalkot", "Dhumthang", "Bhote Namlang", "Sipal Kavre", "Syaule Bazar", "Maneswnara", "Pipaldanda", "Chautara","Chokati", "Dhuskun", "Fulpingdanda", "Thulo Sirubari","Thum Pakhar", "Thulo Pakhar")
+  inds <- which(VDC_shp$VDC_name %in% original)
+  VDC_shp$VDC_name <- replace(VDC_shp$VDC_name, inds, target)
+  VDC_shp@data <- left_join(VDC_shp@data, VDC_xls_df, by = "VDC_name" )
+  
+  # We extract the VDCs of Sindhupalchok completely contained in Sindhupalchok and basin
+  temp_1 <- gContains(study_area_shp, VDC_shp, byid= TRUE) # gContains returns TRUE only for these VDCs completely contained in the studya area
+  VDC_E01_contained_shp <- VDC_shp[which(temp_1 == TRUE), ]
+  
+  # we generate a raster that provides the code of the VDCs:
+  template_r <- LULC_E01_r
+  template_r[] <- NA
+  VDC_contained_r <- rasterize(VDC_E01_contained_shp, template_r , field="VDC_ID", background=NA)
+  SAVEandOPEN_R(VDC_contained_r, output_path, "E01_VDC_contained_r_OutR")
+  SAVEandOPEN_SHP(VDC_E01_contained_shp, output_path, "E01_VDC_contained_pgshp_OutR")
+}
+
+VDC_contained_r <- OPEN_R(output_path, "E01_VDC_contained_r_OutR")
+VDC_contained_shp <- OPEN_SHP(output_path, "E01_VDC_contained_pgshp_OutR")
+```
+
+## Size of study area, population count and VDCs count
+
+The input data are:
+
+```{r results = "hide"}
+VDC_contained_r
+VDC_xls_df
+```
+
+We calculate the number of people (127520) and VDCs (37) in the study area. 
+
+```{r}
+aa <- unique(VDC_contained_r[])
+bb <- data.frame(VDC_ID = aa[!is.na(aa)])
+
+count_VDC_contained <- round(dim(VDC_xls_df)[1], 0)
+pop_VDC_contained <- round(sum(VDC_xls_df$Population), 0)
+
+select_col_v <- !colnames(VDC_xls_df) %in% c("Changed to avoid duplicate?", "BI_road_HH")
+select_row_v <- VDC_xls_df$VDC_ID %in% bb$VDC_ID
+gg <- VDC_xls_df[select_row_v, select_col_v]
+count_fullVDC <- round(dim(gg)[1],0)
+pop_fullVDC <- round(sum(gg$Population),0) 
+```
+
+The study area size:
+
+```{r}
+area_VDC_contained <- CALC_AREA(VDC_contained_shp, byid_area = FALSE, unit_area = "km2")
+```
+
+## Vulnerability for settlement
+
+The input data is:
+
+```{r results = "hide"}
+VDC_contained_r
+VDC_contained_shp
+LULC_E01_r
+flood_r_l
+
+cap_hh_per_pixel <- ASS_xls_df[12,5]
+ceiling_head <- 5
+label_scenario_v <- c("normal scnrio", "medium-extreme scnrio", "high-extreme scnrio")
+```
+
+We prepare the data.
+
+```{r}
+VDC_E02_r <- crop(VDC_contained_r, E02_crop_extent, snap="out")
+LULC_02_r <- crop(LULC_E01_r, E02_crop_extent, snap="out")
+FIX_PROJ_R(VDC_E02_r, E02_ref_r)
+FIX_PROJ_R(LULC_02_r, E02_ref_r)
+```
+
+We loop for each flood scenario.
+
+```{r}
+
+vul_settlment_l <- list()
+VDC_settlement_shp_l <- list() # For plots below
+example_vul_r <- E02_ref_r; example_vul_r[] <- NA
+options(warn=-1)
+
+for  ( i in 1:length(qtles_v)){
+  
+  # first, we open the raster of flood
+  flood_r <- flood_r_l[[i]] #; length(which(!is.na(flood_r[])))
+  
+  # then we change the pixels of the VDC ID raster that are not settlements to NA.
+  vul_settlement_r <- VDC_E02_r
+  index <- LULC_02_r[] == 4
+  vul_settlement_r [!index] <- NA #; length(which(!is.na(vul_settlement_r[])))
+  
+  # then we change to NA in the VDC_ID raster these cells that are not flooded.
+  vul_settlement_r <- mask(vul_settlement_r, flood_r)
+  index <- which(!is.na(vul_settlement_r[])) #; length(index)
+  
+  example_vul_r[index] <- 1
+  SAVEandOPEN_R(example_vul_r, output_path, "E02_flooded_vul_r_OutR")
+  
+  # then, we count the number of pixels per VDC_ID in the vulnerability map
+  aa <- data.frame(VDC_ID = vul_settlement_r[index])
+  bb <- as.data.frame(table(aa)) 
+  colnames(bb) <- c("VDC_ID", "Pixel_Count")
+  bb <- bb[order(bb$Pixel_Count,decreasing=TRUE),]
+  
+  # we calculate the number of households, number of people vulnerable to floods
+  pop_select_df <- VDC_xls_df
+  pop_select_df <- pop_select_df[pop_select_df$VDC_ID %in% bb$VDC_ID,]
+  mean_hh_size <- sum(pop_select_df$Population)/sum(pop_select_df$Household)
+  bb$HH_Count <- bb$Pixel_Count * cap_hh_per_pixel
+  bb$Pop_Count <- round(bb$HH_Count * mean_hh_size,0)
+  cc <- merge(bb, pop_select_df[, c("VDC_ID", "VDC_name")], by = "VDC_ID" ) 
+  cc <- cc[order(cc$Pixel_Count, decreasing = TRUE),]
+  
+  # we create a summary dataframe for some of the most vulnerable VDCs
+  ee <- head(cc[,!colnames(cc) %in% c("VDC_ID")], ceiling_head)
+  ff <- apply(cc[!cc$VDC_name %in% ee$VDC_name, c("HH_Count", "Pop_Count", "Pixel_Count")], 2, sum)
+  
+  # we create a summary dataframe for the other vulnerable VDCs and merge it
+  other_VDC <- dim(cc)[1] - ceiling_head
+  ff$VDC_name <- c(paste0("Remaining ", other_VDC, " vulnerable VDCs"))
+  ff <- as.data.frame(ff)
+  gg <- rbind(ee,ff)
+  
+  # we sum the dataframe and merge it
+  hh <- apply(gg[, c("HH_Count", "Pop_Count", "Pixel_Count")], 2, sum)
+  hh$VDC_name <- c("Total all vulnerable VDCs")
+  hh <- as.data.frame(hh)
+  mm <- rbind(gg,hh)
+  
+  # we look after the output
+  vul_settlment_l[[i]] <- mm
+  index <- VDC_contained_shp$VDC_nam %in% vul_settlment_l[[i]]$VDC_name #; length(index)
+  VDC_settlement_shp_l[[i]] <- VDC_contained_shp[index, ]
+  
+}
+
+options(warn=0)
+vul_settlment_df <- NULL
+
+for (i in 1:length(vul_settlment_l)){ # instead of vul_settlment_df <- melt(vul_settlment_l)
+  vul_settlment_l[[i]]$Scenario <- label_scenario_v[i]
+  vul_settlment_df <- rbind(vul_settlment_df, vul_settlment_l[[i]])
+}
+
+vul_settlment_df$Area.km2 <- vul_settlment_df$Pixel_Count * 900 / 10^6
+
+if (whattodo) (saveRDS(vul_settlment_df, paste(result_path, "/Vul_Settlement_results.rds", sep="")))
+```
+
+## Vulnerability for farmland
+
+The input data is:
+
+```{r results = "hide"}
+VDC_contained_r
+VDC_contained_shp
+LULC_E01_r
+flood_r_l
+
+ceiling_head <- 6
+label_scenario_v <- c("normal scnrio", "medium-extreme scnrio", "high-extreme scnrio")
+```
+
+In addition, we use these assumptions of crop distribution:
+
+```{r}
+FMTD_KABLE(FML_xls_df[, !colnames(FML_xls_df) %in% c("Farmgate price [NPR/kg]")])
+kg_km2_crop_return <- sum(FML_xls_df[, 2] * FML_xls_df[, 4]) * 10^6
+kg_m2_crop_return <- sum(FML_xls_df[, 2] * FML_xls_df[, 4])
+```
+
+Grain production is estimated at `r round(kg_m2_crop_return, 2)` kg/m2. We assume that rice, millet, corn, and wheat are grown on all farm lands. 
+
+We loop for each flood scenario. 
+
+```{r}
+
+vul_farmland_l <- list()
+VDC_farmland_shp_l <- list()
+options(warn=-1)
+
+for  (i in 1:length(qtles_v)){
+  
+  # first, we open the raster of flood
+  flood_r <- flood_r_l[[i]] #; length(which(!is.na(flood_r[])))
+  
+  # then we change the pixels of the VDC ID raster that are not farmland to NA.
+  vul_farmland_r <- VDC_E02_r
+  index <- LULC_02_r[] == 2
+  vul_farmland_r [!index] <- NA #; length(which(!is.na(vul_settlement_r[])))
+  
+  # then we change to NA in the VDC_ID raster these cells that are not flooded.
+  vul_farmland_r <- mask(vul_farmland_r, flood_r)
+  index <- which(!is.na(vul_farmland_r[])) #; length(index)
+  
+  # then, we count the number of pixel per VDC_ID in the farmland map
+  aa <- data.frame(VDC_ID = vul_farmland_r[index])
+  bb <- as.data.frame(table(aa)) 
+  colnames(bb) <- c("VDC_ID", "Pixel_Count")
+  bb <- bb[order(bb$Pixel_Count,decreasing=TRUE),]
+  
+  # we match the VDC_ID with VDC_names. 
+  pop_select_df <- VDC_xls_df
+  pop_select_df <- pop_select_df[pop_select_df$VDC_ID %in% bb$VDC_ID,c("VDC_ID","VDC_name")]
+  cc <- merge(bb, pop_select_df, by = "VDC_ID" ) 
+  cc <- cc[order(cc$Pixel_Count, decreasing = TRUE),]
+  
+  # we create a summary dataframe for some of the most vulnerable farmland
+  ee <- head(cc, ceiling_head)
+  ff <- data.frame(Pixel_Count = sum(cc[!cc$VDC_ID %in% ee$VDC_ID, c("Pixel_Count")]))
+  
+  # we create a summary dataframe for the other vulnerable farmland and merge it
+  other_VDC <- dim(cc)[1] - ceiling_head
+  ff$VDC_name <- c(paste0("Remaining ", other_VDC, " vulnerable VDCs"))
+  ff <- as.data.frame(ff)
+  gg <- rbind(ee[,c("Pixel_Count", "VDC_name")],ff)
+  
+  # we sum the dataframe and merge it
+  hh <- data.frame(Pixel_Count = sum(gg[, "Pixel_Count"]))
+  hh$VDC_name <- c("Total all vulnerable VDCs")
+  hh <- as.data.frame(hh)
+  mm <- rbind(gg,hh)
+  
+  # we look after the output
+  vul_farmland_l[[i]] <- mm
+  index <- VDC_contained_shp$VDC_nam %in% vul_farmland_l[[i]]$VDC_name #; length(index)
+  VDC_farmland_shp_l[[i]] <- VDC_contained_shp[index, ]
+  
+}
+
+options(warn=0)
+vul_farmland_df <- NULL
+
+for (i in 1:length(vul_farmland_l)){ # instead of vul_farmland_df <- melt(vul_farmland_l)
+  vul_farmland_l[[i]]$Scenario <- label_scenario_v[i]
+  vul_farmland_df <- rbind(vul_farmland_df, vul_farmland_l[[i]])
+}
+
+vul_farmland_df$Area.km2 <- vul_farmland_df$Pixel_Count * 900 / 10^6
+vul_farmland_df$Crop.kg  <- vul_farmland_df$Area.km2 * kg_km2_crop_return
+
+if (whattodo) (saveRDS(vul_farmland_df, paste(result_path, "/Vul_Farmland_results.rds", sep="")))
+```
+
+## Population density in Sindhupalchok and in study area
+
+Above, a number of households per pixel identified as settlements of `r round(cap_hh_per_pixel, 0)` was assumed. Here, we look at the population density, i.e., the number of people by VDC divided by the area of a VDC. This step is taken to confirm our conjecture that the population density in the VDCs of the study area is much lower than `r round(cap_hh_per_pixel, 0)` (i.e., round(cap_hh_per_pixel * 10^6 / 900, 0)), as most land-use does not correspond to the land-use settlement. 
+
+Input data are:
+```{r, results = "hide"}
+VDC_contained_r
+```
+
+Population density of Sindhupalchok District.
+```{r}
+area_SK <- CALC_AREA(districts_shp[districts_shp$DIST_NAME %in% c("Sindhupalchok"), ], byid_area = FALSE, unit_area = "km2" )
+
+pop_density <- pop_VDC_contained / area_SK
+```
+
+The population density in the Sindhupalchok District is `r pop_density` people per km^2^.
+
+Population density by VDC in the study area: 
+```{r}
+pop_dens_df <- VDC_contained_shp@data
+pop_dens_df$area_km2 <- CALC_AREA(VDC_contained_shp, byid_area = TRUE, unit_area = "km2")
+pop_dens_df$POP_DENS <- pop_dens_df$Popultn / pop_dens_df$area_km2
+sum_x <- sum(pop_dens_df$Popultn) / sum(pop_dens_df$area_km2)
+mean_x <- mean(pop_dens_df$POP_DENS)
+```
+
+In the VDCs contained in the study area, the population density is `r sum_x` with a mean population across VDCs of `r mean_x` people per km^2^. 
+
+# Output to: Damage paper
+
+## Study area
+
+- Size of study area: `r WS_Sun_km2` km^2^
+- Size of Bhotekoshi Sub-Basin: `r WS_Bhot_km2` km^2^
+- Size of Balephi Sub-Basin: `r WS_Bal_km2` km^2^
+- VDC count in study area: `r count_fullVDC` VDCs
+- VDC count in Sindhupalchok District: `r count_VDC_contained` VDCs
+- population count in study area:`r pop_fullVDC` people 
+- population count in Sindhupalchok District: `r pop_VDC_contained` people
+
+```{r}
+figure_called <- paste0("(", figure_path, "/DamagePaper_StudyArea.jpg)")
+```
+
+![]`r figure_called`
+
+## Methods, data, and model development
+
+Consequences of flood disasters:
+```{r}
+FMTD_KABLE(DISC_xls_df)
+```
+
+Data source (mostly not from interviews):
+
+```{r}
+bbbb <- DAT1_xls_df[, -c(1, 6)]
+FMTD_KABLE(bbbb)
+```
+
+Data source and value (mostly from interviews)
+
+```{r}
+aaaa <- DAT2_xls_df[, -c(1)]
+FMTD_KABLE(aaaa, digits_args = 2, align_args = c("l", "l", "l", "r"))
+```
+
+Illustration of outputs of data frames in method:
+
+```{r}
+# see Master_Table.xlsx, tab D091_ILLU.ID
+# see Master_Table.xlsx, tab D093_ILLU.ID
+```
+
+```{r}
+figure_called <- paste0("(", figure_path, "/DamagePaper_IllustrationOutput.jpg)")
+```
+
+![]`r figure_called`
+
+Other values:
+
+- Angle weight: `weights_for_angle`
+- Rock weight: `unique(GEOL_xls_df$Weight)`
+- Estmation indirect damage settlement: See above by Ctrl+ F without the quotation marks "Relevant for damage paper, regarding indirect damage to settlements"
+- Number of house per pixel: `round(cap_hh_per_pixel, 0)`
+- Number of HPPs (existing): `dim(SHPP_xls_df[SHPP_xls_df$Status == "Operating", ])[1]`
+- Number of HPPs (planned, including in construction): `dim(SHPP_xls_df[SHPP_xls_df$Status != "Operating", ])[1]`
+
+## Model results
+
+### Preparation of results
+
+The data we use is:
+
+```{r results = "hide"}
+res_all_df <- readRDS(paste0(result_path,"/Agg_results.rds")) # as an alternative to read.table(paste(output_path, "/results", sep=""), sep="\t", header=TRUE)
+FX
+```
+
+We first look at the data and take a subset.
+
+```{r}
+# what is the table's content?
+unique_dmg   <- levels(res_all_df$ValueOf)
+unique_sc    <- unique(res_all_df$Scenario)
+unique_asset <- levels(res_all_df$ElementAtRisk)
+
+# Let's subset:
+index_sc      <- res_all_df$Scenario %in% c("50%-quantile for low-exposure scenario", 
+                                            "50%-quantile for high-exposure scenario",
+                                            "99.9%-quantile for low-exposure scenario",
+                                            "99.9%-quantile for high-exposure scenario")
+index_valueof <- res_all_df$ValueOf %in% c("DD_TotalValue [mio NPR]", 
+                                           "ID_TotalValue [mio NPR]", 
+                                           "IDandDD_TotalValue [mio NPR]" )
+
+res_df <- res_all_df[index_sc & index_valueof, ]
+
+# Let's convert currency:
+
+res_df$Value <- res_df$Value / FX
+
+# Let's have proper labels.
+label_damage_type_v <- c("Direct damage", "Indirect damage", "Total damage")
+label_elements_v    <- c("HPP", "Road", "Settlement", "Farmland", "All assets")
+label_scenario_v    <- c("Low scenario", "High scenario")
+```
+
+We calculate the mean, calculate the standard deviation. 
+
+```{r}
+# Let's calculate the mean in USD
+des_stat_res_df <- aggregate(res_df$Value, by=list(res_df$ValueOf, res_df$ElementAtRisk, res_df$Scenario), FUN = mean) 
+colnames(des_stat_res_df) <- colnames(res_df)[-1]
+colnames(des_stat_res_df)[4] <- "Mean"
+
+# Then, let's calculate the standard deviation in USD
+bbb <- aggregate(res_df$Value, by=list(res_df$ValueOf, res_df$ElementAtRisk, res_df$Scenario), FUN= sd) 
+des_stat_res_df$St_Dev <- bbb$x
+
+# Finally, let's calculate the CoV:
+des_stat_res_df$CoV <- des_stat_res_df$St_Dev / des_stat_res_df$Mean
+```
+
+### Tables for low scenario
+
+First, the mean (TableR 1).
+
+```{r}
+# define criteria rows
+short_name3_v <- c("ValueOf", "HPP", "road", "settlement", "farmland", "Total_ElementsAtRisk")
+this_scenario <- c("50%-quantile for low-exposure scenario")
+
+# row and column name
+first_col_name <- c(label_damage_type_v)
+my_col_name    <- c("Low scenario, mean value in million USD", label_elements_v)
+
+# Unselect  columns
+c_select_v <- !colnames(des_stat_res_df) %in% c("CoV", "St_Dev")
+mean_res_df <- des_stat_res_df[,c_select_v]
+
+# Cast low scenario
+mean_res_low_df <- mean_res_df[mean_res_df$Scenario == this_scenario, !colnames(mean_res_df) %in% c("Scenario")]
+mean_res_low_df <- cast(mean_res_low_df, formula = ValueOf ~ ElementAtRisk, value="Mean")
+mean_res_low_df <- mean_res_low_df[, short_name3_v]
+mean_res_low_df[,1] <- label_damage_type_v 
+colnames(mean_res_low_df) <- my_col_name
+TableR_1 <- mean_res_low_df
+TableR_1[, -1] <- SIMPLE_ROUND(TableR_1[, -1])
+
+FMTD_KABLE(TableR_1, rownames_bool = FALSE, digits_args = 1, align_args = c("l", rep("r",5)))
+```
+
+Then, the contribution of elements (TableR 2).
+
+```{r}
+# Contribution of elements
+my_col_name <- c("Contribution of element to damage type (low scenario)", label_elements_v)
+bb <- mean_res_low_df[, 2:dim(mean_res_low_df)[2]]
+bb <- SIMPLE_ROUND_PC(bb, 2)
+low_element_m <- cbind(first_col_name, bb)
+colnames(low_element_m) <- my_col_name
+TableR_2 <- low_element_m
+FMTD_KABLE(TableR_2, rownames_bool = FALSE, digits_args = 1, align_args = c("l", rep("r",5)))
+```
+
+Finally, the contribution of damage type (TableR 3).
+
+```{r}
+# Contribution of damage type
+my_col_name <- c("Contribution of damage type to element (low scenario)", label_elements_v)
+bb <- mean_res_low_df[, 2:dim(mean_res_low_df)[2]]
+bb <- SIMPLE_ROUND_PC(bb, 1)
+low_damage_m <- cbind(first_col_name, bb)
+colnames(low_damage_m) <- my_col_name
+TableR_3 <- low_damage_m
+FMTD_KABLE(TableR_3, rownames_bool = FALSE, align_args = c("l", rep("r",5)))
+```
+
+### Tables for high scenario
+
+First, the mean (TableR 4).
+
+```{r}
+# define criteria rows
+short_name3_v <- c("ValueOf", "HPP", "road", "settlement", "farmland", "Total_ElementsAtRisk")
+this_scenario <- c("99.9%-quantile for high-exposure scenario")
+
+# row and column name
+first_col_name <- c(label_damage_type_v)
+my_col_name <- c("High scenario, mean value in million USD", label_elements_v)
+
+# Unselect  columns
+c_select_v <- !colnames(des_stat_res_df) %in% c("CoV", "St_Dev")
+mean_res_df <- des_stat_res_df[,c_select_v]
+
+# Caste low scenario
+mean_res_high_df <- mean_res_df[mean_res_df$Scenario == this_scenario, !colnames(mean_res_df) %in% c("Scenario")]
+mean_res_high_df <- cast(mean_res_high_df, formula = ValueOf ~ ElementAtRisk, value="Mean")
+mean_res_high_df <- mean_res_high_df[, short_name3_v]
+mean_res_high_df[,1] <- label_damage_type_v 
+colnames(mean_res_high_df) <- my_col_name
+TableR_4 <- mean_res_high_df
+TableR_4[, -1] <- SIMPLE_ROUND(TableR_4[, -1])
+
+FMTD_KABLE(TableR_4, rownames_bool = FALSE, digits_args = 1, align_args = c("l", rep("r",5)))
+```
+
+Then, the contribution of elements (TableR 5).
+
+```{r}
+# Contribution of elements
+my_col_name <- c("Contribution of element to damage type (high scenario)", label_elements_v)
+bb <- mean_res_high_df[, 2:dim(mean_res_high_df)[2]]
+bb <- SIMPLE_ROUND_PC(bb, 2)
+high_element_m <- cbind(first_col_name, bb)
+colnames(high_element_m) <- my_col_name
+TableR_5 <- high_element_m
+FMTD_KABLE(TableR_5, rownames_bool = FALSE, align_args = c("l", rep("r",5)))
+```
+
+Finally, the contribution of damage type (TableR 6).
+
+```{r}
+# Contribution of damage type
+my_col_name <- c("Contribution of damage type to element (high scenario)", label_elements_v)
+bb <- mean_res_high_df[, 2:dim(mean_res_high_df)[2]]
+bb <- SIMPLE_ROUND_PC(bb, 1)
+high_damage_m <- cbind(first_col_name, bb)
+colnames(high_damage_m) <- my_col_name
+TableR_6 <- high_damage_m
+FMTD_KABLE(TableR_6, rownames_bool = FALSE, align_args = c("l", rep("r",5)))
+```
+
+### Other tables
+
+Table for difference between low and high scenario (TableR 7).
+
+```{r}
+first_col_name <- c(label_damage_type_v, "Factor of increase relative to low scenario", "Contribution of element to difference in total damage")
+my_col_name <- c("Difference from low scenario to high scenario, mean value in million USD", label_elements_v)
+
+mean_res_diff_df <- round(mean_res_high_df[, 2:dim(mean_res_high_df)[2]] - mean_res_low_df[, 2:dim(mean_res_low_df)[2]], 3)
+bb <- round(mean_res_high_df[3,2:dim(mean_res_high_df)[2]] / mean_res_low_df[3,2:dim(mean_res_low_df)[2]], 3)
+bb <- SIMPLE_ROUND(rbind(mean_res_diff_df, bb))
+aa <- round(mean_res_diff_df[dim(mean_res_diff_df)[1],] / mean_res_diff_df[dim(mean_res_diff_df)[1], dim(mean_res_diff_df)[2]] * 100, 0)
+aa [aa < 1] <- "<1" 
+aa <- paste(aa, "%", sep = "")
+
+mean_res_diff_df <- rbind(bb, aa)
+mean_res_diff_df <- cbind(first_col_name, mean_res_diff_df)
+colnames(mean_res_diff_df) <- my_col_name
+TableR_7 <- mean_res_diff_df
+FMTD_KABLE(TableR_7, rownames_bool = FALSE, digits_args = 1, align_args = c("l", rep("r",5)))
+```
+
+Table for comparison with alternative scenario (high-flood-low-exposure) (TableR 8). Note that the small variation for farmland comes from the variability in the location of landslides. 
+
+```{r}
+# names and labels
+this_scenario <- c("99.9%-quantile for low-exposure scenario")
+first_col_name <- c("Total damage, alternative scenario (A)", "Total damage, high scenario (B)", "Absolute stand-alone effect of high exposure (C = B - A)", "Factored stand-alone effect of high exposure (C / A)")
+my_col_name <- c("High-flood-low-exposure scenario and comparison, mean value in million USD", label_elements_v)
+
+aa <- mean_res_df[mean_res_df$Scenario == this_scenario & mean_res_df$ValueOf == "IDandDD_TotalValue [mio NPR]", !colnames(mean_res_df) %in% c("Scenario")]
+aa <- cast(aa, formula = ValueOf ~ ElementAtRisk, value="Mean")
+aa <- aa[, short_name3_v][, -1]
+
+bb <- mean_res_high_df[3, 2:dim(mean_res_high_df)[2]]
+cc <- bb - aa
+dd <- cc / aa
+
+colnames(aa) <- colnames(bb)
+diff_alt_df <- SIMPLE_ROUND(rbind(aa, bb, cc, dd))
+
+diff_alt_df <- cbind(first_col_name, diff_alt_df)
+colnames(diff_alt_df) <- my_col_name
+TableR_8 <- diff_alt_df
+FMTD_KABLE(TableR_8, rownames_bool = FALSE, digits_arg = 1, align_args = c("l", rep("r",5)))
+```
+
+Table for comparison with alternative scenario (low-flood-high-exposure) (TableR 9).
+
+```{r}
+# names and labels
+this_scenario <- c("50%-quantile for high-exposure scenario")
+first_col_name <- c("Total damage, alternative scenario (A)", "Total damage, high scenario (B)", "Absolute stand-alone effect of high flood (C = A - B)", "Factored stand-alone effect of high flood (C / A)")
+my_col_name <- c("Low-flood-high-exposure scenario and comparison, mean value in million USD", label_elements_v)
+
+aa <- mean_res_df[mean_res_df$Scenario == this_scenario & mean_res_df$ValueOf == "IDandDD_TotalValue [mio NPR]", !colnames(mean_res_df) %in% c("Scenario")]
+aa <- cast(aa, formula = ValueOf ~ ElementAtRisk, value="Mean")
+aa <- aa[, short_name3_v][, -1]
+
+bb <- mean_res_high_df[3, 2:dim(mean_res_high_df)[2]]
+cc <- bb - aa
+dd <- cc / aa
+
+colnames(aa) <- colnames(bb)
+diff_alt_df <- SIMPLE_ROUND(rbind(aa, bb, cc, dd))
+
+diff_alt_df <- cbind(first_col_name, diff_alt_df)
+colnames(diff_alt_df) <- my_col_name
+TableR_9 <- diff_alt_df
+FMTD_KABLE(TableR_9, rownames_bool = FALSE, digits_args = 1, align_args = c("l", rep("r",5)))
+```
+
+Coefficient of variation (TableR 10). (Not used)
+
+```{r}
+# define criteria rows
+short_name3_v <- c("HPP", "road", "settlement", "farmland", "Total_ElementsAtRisk")
+this_scenario <- c("99.9%-quantile for high-exposure scenario")
+
+# row and column name
+first_col_name <- c(label_damage_type_v)
+my_col_name <- c("Coefficient of variation (high scenario)", label_elements_v)
+
+# Unselect  columns
+c_select_v <- !colnames(des_stat_res_df) %in% c("Mean", "St_Dev")
+CoV_res_df <- des_stat_res_df[,c_select_v]
+
+# Caste
+CoV_res_high_df <- CoV_res_df[CoV_res_df$Scenario == this_scenario, !colnames(CoV_res_df) %in% c("Scenario")]
+CoV_res_high_df <- cast(CoV_res_high_df, formula = ValueOf ~ ElementAtRisk, value="CoV")
+CoV_res_high_df <- CoV_res_high_df[, short_name3_v]
+CoV_res_high_df <- SIMPLE_ROUND_PC(CoV_res_high_df * 100, 2)
+CoV_res_high_df <- cbind(label_damage_type_v, CoV_res_high_df) 
+colnames(CoV_res_high_df) <- my_col_name
+TableR_10 <- CoV_res_high_df
+#FMTD_KABLE(TableR_10, rownames_bool = FALSE, digits_args = 3, align_args = c("l", rep("r",5)))
+```
+
+### Other numbers
+
+Size of exposure of agriculture land. 
+```{r}
+
+row_select_low <- res_all_df$ValueOf == "Expsre_PixelCount [count pixel]" & res_all_df$ElementAtRisk == "farmland" & res_all_df$Scenario == "50%-quantile for low-exposure scenario"
+size_vul_farmland_low <- round(mean(res_all_df$Value[row_select_low]) * 900 / 10^6, 1)
+
+row_select_high <- res_all_df$ValueOf == "Expsre_PixelCount [count pixel]" & res_all_df$ElementAtRisk == "farmland" & res_all_df$Scenario == "99.9%-quantile for high-exposure scenario"
+size_vul_farmland_high <- round(mean(res_all_df$Value[row_select_high]) * 900 / 10^6, 1)
+
+```
+
+### Plots
+
+Prepare loop.
+
+```{r}
+short_name3_v   <- c("ValueOf", "HPP", "road", "settlement", "farmland", "Total_ElementsAtRisk")
+to_loop         <- c("HPP", "road", "settlement", "farmland")
+round_at        <- c(1, 2, 1, 4)
+plot_l          <- list()
+```
+
+Low scenario.
+```{r}
+# Unselect rows and columns
+this_scenario <- c("50%-quantile for low-exposure scenario")
+r_select_v <- res_df$Scenario == this_scenario & res_df$ValueOf == "DD_TotalValue [mio NPR]" & res_df$ElementAtRisk != "Total_ElementsAtRisk" 
+low_plot_df <- res_df[r_select_v, ]
+low_plot_df <- low_plot_df[, colnames(low_plot_df) %in% c("ElementAtRisk", "Value")]
+
+#Prepare loop
+my_title  <- c("HPPs \n(direct damage, low scenario)", 
+             "Roads \n(direct damage, low scenario)", 
+             "Houses \n(direct damage, low scenario)",
+             "Farmland \n(direct damage, low scenario)")
+my_colour <- c("slateblue1",  "springgreen4", "cyan3", "green2")
+
+# Loop
+for (i in 1:length(to_loop)) {
+ data_to_plot <- low_plot_df[low_plot_df$ElementAtRisk == to_loop[i], ]
+  min_tick <- min(data_to_plot$Value)
+  med_tick <- min(data_to_plot$Value) +(max(data_to_plot$Value) - min(data_to_plot$Value)) /2
+  max_tick <-  max(data_to_plot$Value)
+  label_breaks <- c(min_tick, med_tick, max_tick)
+  label_limits <- label_breaks[c(1,3)]
+  label_names <- sprintf(paste0("%.",round_at[i], "f"), round(label_breaks, round_at[i]))
+  d1 <- ggplot(data = data_to_plot, aes(Value)) +
+        theme(plot.background = element_rect(colour = 'lightgrey'),
+                   axis.title=element_text(size=10), 
+                   plot.title = element_text(size=14, hjust=0.5),
+                   axis.text=element_text(size=8, angle=45)) +
+        geom_line(stat = "density", colour = my_colour[i] ) +
+        labs( x = "Value [m USD]", y = "Probability density", title = my_title[i]) +
+        theme(plot.title = element_text(colour = my_colour[i], face = "bold", size = (8))) +
+        scale_x_continuous(limits = label_limits, breaks = label_breaks, labels = label_names) +
+        scale_y_continuous(breaks = NULL)
+  plot_l[[i]] <- d1
+}
+
+```
+
+High scenario.
+```{r} 
+# Unselect rows and columns
+this_scenario <- c("99.9%-quantile for high-exposure scenario")
+r_select_v <- res_df$Scenario == this_scenario & res_df$ValueOf == "DD_TotalValue [mio NPR]" & res_df$ElementAtRisk != "Total_ElementsAtRisk" 
+low_plot_df <- res_df[r_select_v, ]
+low_plot_df <- low_plot_df[, colnames(low_plot_df) %in% c("ElementAtRisk", "Value")]
+
+#Prepare loop
+my_title  <- c("HPPs \n(direct damage, high scenario)", 
+             "Roads \n(direct damage, high scenario)", 
+             "Houses \n(direct damage, high scenario)",
+             "Farmland \n(direct damage, high scenario)")
+
+my_colour <- c("tomato1", "yellow3", "darkorange3", "coral4")
+
+# Loop
+for (i in 1:length(to_loop)) {
+  data_to_plot <- low_plot_df[low_plot_df$ElementAtRisk == to_loop[i], ]
+  min_tick <- min(data_to_plot$Value)
+  med_tick <- min(data_to_plot$Value) +(max(data_to_plot$Value) - min(data_to_plot$Value)) /2
+  max_tick <-  max(data_to_plot$Value)
+  label_breaks <- c(min_tick, med_tick, max_tick)
+  label_limits <- label_breaks[c(1,3)]
+  label_names <- sprintf(paste0("%.",round_at[i], "f"), round(label_breaks, round_at[i]))
+  d1 <- ggplot(data = data_to_plot, aes(Value)) +
+        theme(plot.background = element_rect(colour = 'lightgrey'),
+                   axis.title=element_text(size=10), 
+                   plot.title = element_text(size=14, hjust=0.5),
+                   axis.text=element_text(size=8, angle=45)) +
+        geom_line(stat = "density", colour = my_colour[i]) +
+        labs( x = "Value [m USD]", y = "Probability density", title = my_title[i]) +
+        theme(plot.title = element_text(colour = my_colour[i], face = "bold", size = (8))) +
+        scale_x_continuous(limits = label_limits, breaks = label_breaks, labels = label_names) +
+        scale_y_continuous(breaks = NULL)
+  plot_l[[i + length(to_loop)]] <- d1
+}
+```
+
+```{r fig.height=5, fig.width=9}
+ordered_plot_l <- list(plot_l[[1]], plot_l[[5]],
+                       plot_l[[2]], plot_l[[6]],
+                       plot_l[[3]], plot_l[[7]],
+                       plot_l[[4]], plot_l[[8]]) 
+MULTIPLOT(plotlist = ordered_plot_l, cols = 4)
+```
+
+### Body text
+
+Means of direct and indirect damage for the four asset categories were computed from the values generated in the aggregation module for the low and high scenarios. The graphs of the distribution of direct damage for both scenarios are displayed in Figure xxx.
+
+Estimated total economic damage increases between the low scenario and the high scenario by a factor of `r round(as.numeric(TableR_7[4,6]), 1)` (TableR_7), from a mean of `r TableR_1[3,6]` million USD (TableR_1) to `r TableR_4[3,6]` million USD (TableR_4). Total damage to HPPs increases between the low scenario and the high scenario by a factor of `r round(as.numeric(TableR_7[4,2]), 1)` (the highest increase among the four asset categories; TableR_7), from a mean of `r TableR_1[3,2]` million USD (TableR_1) to `r TableR_4[3,2]` million USD (TableR_4). 
+
+Because both the extent of hazards and the exposure value increase from the low scenario to the high scenario, it is useful to explore further the reason for the increase in total damage. To do so, the following modelling steps were taken: (a) run the model assuming the combination of the high-flood scenario with the low-exposure scenario; (b) compare these results with the results of the high scenario (i.e., the combination of the high-flood scenario with the high-exposure scenario); (c) run the model assuming the combination of the low-flood scenario with the high-exposure scenario; and (d) compare these results with the results of the high scenario. 
+
+These comparisons show that the total economic damage increases between the high-flood-low-exposure scenario and the high scenario by a factor of `r TableR_8[4, 6]`, from a mean of `r TableR_8[1, 6]` million USD to a mean of `r TableR_8[2, 6]` million USD (TableR_8). Direct and indirect damage to HPPs increases between the high-flood-low-exposure scenario and the high scenario by a factor of `r TableR_8[4, 2]` (from `r TableR_8[1, 2]` million USD to `r TableR_8[2, 2]` million USD). Total economic damage increases between the low-flood-high-exposure scenario and the high scenario by a factor of `r TableR_9[4, 6]`, from a mean of `r TableR_9[1, 6]` million USD to a mean of `r TableR_9[2, 6]` million USD (TableR_9). Direct and indirect damage to HPPs increases between the low-flood-high-exposure scenario and the high scenario by a factor of `r TableR_9[4, 2]` (from `r TableR_9[1, 2]` million USD to `r TableR_9[2, 2]` million USD). Therefore, the increase in total economic damage between the low scenario and the high scenario is driven by the assumptions of increase of two parameters: (1) water stage (therefore, increase of flooded areas); and (2) number of HPPs that could be damaged (i.e., from seven to eighteen HPPs).
+
+In the low and high scenarios, respectively, `r TableR_3[2,6]` and `r TableR_6[2,6]` of the damage summed over all four assets are indirect damage (TableR_3 and TableR_6). In both scenarios, the categories "road" and "settlement" have the largest share of indirect damage (TableR_2 and TableR_5). In the low scenario, the loss of customs revenue owing to road closure (`r TableR_1[2,3]` million USD) contributes `r TableR_2[2,3]` to indirect damage (TableR_1 and TableR_2). The loss of income from road traffic for the local population (`r TableR_1[2,4]` million USD) contributes `r TableR_2[2,4]` to indirect damage. In the high scenario, the loss of `r TableR_4[2,3]` million USD of customs revenue owing to road closure contributes `r TableR_5[2,3]` to indirect damage (TableR_4 and TableR_5). The loss of income from road traffic for the local population of `r TableR_4[2,4]` million USD contributes `r TableR_5[2,4]` to indirect damage.
+
+HPPs and houses incur the highest direct damage in both scenarios. As shown in TableR_2 and TableR_5, direct damage is split between the four asset categories for the low and high scenarios as follows: (a) `r TableR_2[1,2]` and `r TableR_5[1,2]` for HPPs; (b) `r TableR_2[1,4]` and `r TableR_5[1,4]` for people's houses; (c) `r TableR_2[1,3]` and `r TableR_5[1,3]` for roads; and (d) `r TableR_2[1,5]` for farm lands. Direct and indirect damage to farmland is of an order of magnitude lower than damage to the other assets, because the modelled area of farmland vulnerable to floods is small (`r round(size_vul_farmland_low,2)` km^2^ for the low scenario and `r round(size_vul_farmland_high,2)` km^2^ for the high scenario) and the farm gate crop price value (`r value_farmland_km2_USD` USD per km^2^ of farmland) is low relative to the unit value of other assets (Table xxx). Nonetheless, as subsistence farming is commonly practiced in many parts of Nepal, including the study area, farm lands must be accounted for in the assessment of the consequences of flood disasters. 
+
+# Output to: Vulnerability paper
+
+## Study area and methods
+
+```{r}
+count_interviews <- dim(IFMT_xls_df)[1]
+```
+
+Study area:
+
+- Study area size: `r area_VDC_contained` km^2^
+- VDC count in study area: `r count_fullVDC` VDCs
+- VDC count in Sindhupalchok District: `r count_VDC_contained` VDCs
+- population count in study area:`r pop_fullVDC` people 
+- population count in Sindhupalchok District: `r pop_VDC_contained` people
+- Discharge (mean and standard deviation) is available in:
+```{r}
+FMTD_KABLE(discharge_and_station_df)
+```
+
+```{r}
+figure_called <- paste0("(", figure_path, "/VulnerabilityPaper_StudyArea.jpg)")
+```
+
+![]`r figure_called`
+
+- Number of interviews: `r count_interviews` interviews. 
+- Table of history of flood disasters:
+```{r}
+FMTD_KABLE(ANAL_xls_df, rownames_bool = FALSE, align_args = rep("l", 4))
+```
+
+- Table of data availability of DHM:
+```{r}
+FMTD_KABLE(discharge_and_station_df, digits_args = 0, align_args = c("l", rep("r",5)), rownames_bool = FALSE)
+```
+
+- Water stage for each river and each scenario:
+```{r}
+FMTD_KABLE(q_values_toprint, digits_args = 2, rownames_bool =FALSE)
+```
+
+## Results
+
+The input data are:
+
+```{r, results="hide"}
+vul_settlment_df <- readRDS(paste0(result_path,"/Vul_Settlement_results.rds"))
+vul_farmland_df <- readRDS(paste0(result_path,"/Vul_Farmland_results.rds"))
+ANAL_xls_df
+```
+
+Tables for settlement.
+
+```{r}
+select_v <- c("VDC_name", "HH_Count", "Pop_Count", "Scenario")
+select_s_df <- vul_settlment_df[, select_v]
+colnames(select_s_df) <- c("Location", "Number of vulnerable households", "Number of vulnerable people", "Scenario")
+unique_v <- unique(select_s_df$Scenario)
+```
+
+```{r}
+aa <- select_s_df[select_s_df$Scenario == unique_v[1],!colnames(select_s_df) == c("Scenario")]
+FMTD_KABLE(aa, digits_args = 0, align_args = c("l", "r", "r"))
+```
+
+xxx
+
+```{r}
+aa <- select_s_df[select_s_df$Scenario == unique_v[2],!colnames(select_s_df) == c("Scenario")]
+FMTD_KABLE(aa, digits_args = 0, align_args = c("l", "r", "r"))
+```
+
+xxx
+
+```{r}
+aa <- select_s_df[select_s_df$Scenario == unique_v[3],!colnames(select_s_df) == c("Scenario")]
+FMTD_KABLE(aa, digits_args = 0, align_args = c("l", "r", "r"))
+```
+
+Tables for farmland.
+
+```{r}
+select_v <- c("VDC_name", "Crop.kg", "Area.km2", "Scenario")
+select_f_df <- vul_farmland_df[, select_v]
+colnames(select_f_df) <- c("Location", "Vulnerable crop production [kg]", "Vulnerable area size [km2]", "Scenario")
+unique_v <- unique(select_f_df$Scenario)
+```
+
+```{r}
+aa <- select_f_df[select_f_df$Scenario == unique_v[1],!colnames(select_f_df) == c("Scenario")]
+aa[, 2] <- as.character(round(aa[, 2], 0))
+FMTD_KABLE(aa, digits_args = 2, align_args = c("l", "r", "r"))
+```
+
+xxx
+
+```{r}
+aa <- select_f_df[select_f_df$Scenario == unique_v[2],!colnames(select_f_df) == c("Scenario")]
+aa[, 2] <- as.character(round(aa[, 2], 0))
+FMTD_KABLE(aa, digits_args = 2, align_args = c("l", "r", "r"))
+```
+
+xxx
+
+```{r}
+aa <- select_f_df[select_f_df$Scenario == unique_v[3],!colnames(select_f_df) == c("Scenario")]
+aa[, 2] <- as.character(round(aa[, 2], 0))
+FMTD_KABLE(aa, digits_args = 2, align_args = c("l", "r", "r"))
+```
+
+This plot for settlement and farmland
+
+```{r, fig.keep="last"}
+title_label <- c("(A)\nHouses\nAll scenarios", "(B)\nAgriculture fields\nBaseline-flood scenario", "(C)\nAgriculture fields\nExtreme-flood scenarios")
+graphics.off()
+par(mfrow=c(1,3))
+colour_VDC <- c("orange") 
+i <- 1
+plot(VDC_contained_shp, border = "lightgrey")
+plot(VDC_settlement_shp_l[[i]], add=TRUE, border="white", col = colour_VDC[i])
+text(VDC_settlement_shp_l[[i]], VDC_settlement_shp_l[[i]]$VDC_nam, cex = 2)
+title(main = title_label[i])
+plot(rivers_split_shp, add=TRUE, col = "blue", cex = 8)
+
+colour_VDC <- c("lightgreen", "darkgreen")
+for (i in 1:2) {
+  plot(VDC_contained_shp, border = "lightgrey")
+  plot(VDC_farmland_shp_l[[i]], add=TRUE, border="white", col = colour_VDC[i])
+  text(VDC_farmland_shp_l[[i]], VDC_farmland_shp_l[[i]]$VDC_nam, cex = 2)
+  title(main = title_label[i + 1])
+  plot(rivers_split_shp, add=TRUE, col = "blue", cex = 8)
+}
+```
+
+And we have these figures:
+
+```{r}
+figure_called <- paste0("(", figure_path, "/VulnerabilityPaper_Results.jpg)")
+```
+
+![]`r figure_called`
+
+```{r}
+figure_called <- paste0("(", figure_path, "/VulnerabilityPaper_ResultsZoom.jpg)")
+```
+
+![]`r figure_called`
+
+Limitations of the FRAM:
+
+- Min correlation of H of DHM station: `r correlation_H[1]`
+- Max correlation of H of DHM station: `r correlation_H[2]`
+
+# Output to: LULC paper
+
+See above section: ## LULC accuracy assessment
+
+In addition, for the study area: 84% of the study area contains 37 VDCs and 127,520 inhabitants: 
+- `r round((area_VDC_contained/area_buffered)* 100, 0)`
+- VDC count in study area: `r count_fullVDC` VDCs
+- population count in study area:`r pop_fullVDC` people 
+
+# Appendices
+
+## Data input
+
+The following list describes the data that are input of the model:
+
+- There are .xlsx files that are linked to eachother
+- The remaining are folders:
+   + The first field is 0 for folders that contain analyses and subfolders
+   + Otherwise, the first field is E99, E01, E02 to indicate extents of shapefiles and rasters
+   + The last field indicates the source:EExplorer == Earth Explorer, ArcGIS == Derivation on ArcGIS, ICIMOD == ICIMOD's RDS database
+
+```{r}
+x1 <- as.vector(list.files(input_path, full.names = FALSE, all.files = FALSE))
+#aa <- regexpr(".xls", x1) == -1 & x1 != "DHM" # remove from the list the names of tables
+x1 <- as.data.frame(x1)
+colnames(x1)[1] <- "File name"
+FMTD_KABLE(x1, rownames_bool = TRUE)
+```
+
+This chunk describes the structure of Master_table.xlsx.
+
+```{r}
+name_v <- c("sheet_name", "description", "source")
+x <- NULL
+i_end <- 0
+y <- 0
+while( class(y) != "try-error" ) {
+    i_end <- i_end +1
+    y <- try(read_excel(paste(input_path,"/Master_table.xlsx", sep=""), sheet = i_end, skip=0), silent=TRUE)
+}
+
+for (i in 1:(i_end-1)){
+y <- as.data.frame(read_excel(paste(input_path,"/Master_table.xlsx", sep=""), sheet = i, skip=0, col_names = FALSE))
+colnames(y) <- name_v
+y <- c(y[3,2], y[2,2], y[1,2])
+x <- rbind(x,y)
+}
+
+colnames(x) <- name_v
+rownames(x) <- 1:dim(x)[1]
+
+excert_MasterTable <- head(x)
+```
+
+## GPS points for mapping
+
+The data containing the GPS coordinates of points of interest is:
+
+```{r results= "hide"}
+GPS_xls_df
+```
+
+The dataframe is converted to a SpatialPointsDataFrame.
+
+```{r}
+GPSpoints_shp <- TRANSFORM_TABLE_SHP(GPS_xls_df)
+
+options(warn = -1)
+if (whattodo) (GPSpoints_shp <- SAVEandOPEN_SHP(GPSpoints_shp,output_path, "E01_GPS_ptshp_OutR"))
+options(warn = 0)
+
+GPSpoints_shp <- OPEN_SHP(output_path, "E01_GPS_ptshp_OutR")
+```
+
+## Github
+
+Here are the steps to display codes on Github in the repository FRAM-Cloud. First, create new repository: Repositories -> New -> FRAM-Cloud
+
+Then, the text file should be added these words:
+
+- This repository contains codes of the flood risk assessment model (FRAM) applied for a study area in Nepal.
+- The input and output data are available in Dropbox: https://www.dropbox.com/sh/zogfjvimvxl5us9/AAB2fvb2jQL77BTu6K2i63Q2a?dl=0
+- Instructions: first, download this Git repository to your desktop in a local repository. This local repository on your desktop is referred to as "absolute_path" in 21_documentation_main.Rmd.  
+- Then, open the FRAM.RProj to find out about the content of this repository in 21_documentation_main.Rmd
+- Note that the accuracy assessment of the results of LULC classification is in section "## LULC accuracy assessment" in 21_documentation_main.Rmd.
+
+Third, create a Git folder /FRAM-Cloud/R by creating a Git dummy file in a Git folder: New File -> R/Dummy_file -> Commit
+
+Fourth, drag files in the desktop folder /R  to the Git folder /R. Remove the Git dummy file.
+
+Last, drag files of the desktop folder FRAM, such as the FRAM.RProj and GITIGNORE, in the Git repository. 
+

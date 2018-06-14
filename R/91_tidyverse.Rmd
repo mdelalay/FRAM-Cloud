@@ -1,0 +1,258 @@
+---
+title: "Untitled"
+author: "Marie Delalay"
+date: "14 October 2017"
+output:
+  word_document:
+    highlight: default
+    reference_docx: template.docx
+    toc: yes
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+---
+
+# Global options and chunk options
+
+```{r options}
+rm(list=ls())
+
+# Good websites ------------------------------
+
+#shell.exec("http://r-pkgs.had.co.nz/r.html") Package
+#shell.exec("http://style.tidyverse.org/") Style
+
+# Good name of file ---------------------------
+
+# This is a good name of file: 00_good_name.Rmd or 00_namified.Rmd
+
+# General rules -------------------------------
+
+# Install libraries and load them first
+library("dplyr", "knitr") # to use pipe operator like %>%
+# # In code, use comments to explain the "why" not the "what" or "how"
+
+# Rmd Options ---------------------------------
+
+#shell.exec("https://yihui.name/knitr/options/") Global options
+
+knitr::opts_chunk$set(df_print = "kable", fig_caption = "yes", fig_height = 5, fig_width= 5, fig.keep = "all", # Global option
+                      eval = TRUE, error = FALSE, # Evaluation. error: is knit interrupted if the chunks have error?
+                      echo = FALSE, results = "asis", include = TRUE, warning = FALSE, message=FALSE) # Display. Displayed by default only (1) tables and (2) plots. echo: is the chunk printed?
+```
+
+
+# Lists
+
+A list has an empty line between the description and the beginning of the list
+
+1. number 1
+2. number 2
+    a. ident with two tabs
+    b. ident
+        1. ident with four tabs
+3. number 3
+    
+This is a unnumbered list:
+
+- first item
+- second item
+    - second item A
+    - second item B
+- third item
+
+
+# Tables
+
+Note:
+
+- Captions for tables do not work: we tried in kable function and in chunk options without success.
+
+```{r table}
+
+# x must be a matrix or dataframe with set column names
+fmtd_kable <- function(x, digits_args, align_args, rownames) {
+  if (!missing(rownames)) { 
+    x <- cbind(rownames, x)
+    colnames(x)[1] <-  "Row content"
+  }
+
+  if (missing(digits_args)) (digits_args <- 2)
+  if (missing(align_args)) (align_args <- "r")
+
+  x <- as.data.frame(x)
+    
+  knitr::kable(x, row.names = FALSE, colnames = colnames(aa),
+               digits = digits_args, align = align_args,
+               format.args = list(nsmall = digits_args, big.mark  = ","))
+}
+
+# Example
+aa <- data.frame(simple_x =c(1000.253,2,3), square_x = c(1,4,9), string_x = paste("equ_",1:3))
+aa <- as.matrix(aa)
+fmtd_kable(aa, digits_arg = 3, align_args =  "l", rownames = paste("example_",1:3))
+```
+
+# Plots
+
+Note:
+
+- fig.cap allows to set the same caption for all plots in a chunk. 
+
+
+```{r plot, fig.cap = "plot X", echo = TRUE}
+
+aa <- as.data.frame(aa)
+plot(aa$simple_x, aa$square_x)
+plot(aa$simple_x, aa$square_x, title ="second")
+```
+
+# Insert a picture
+
+What follows in the Rmd file is the ALt text ![my picture attempt](C:/Users/mdela/Dropbox/Prof/NUS/Projects/Modelling/Maps/StArea_Oct2017/Maps/HPP-2.jpg)
+
+
+# Syntax in R script
+
+```{r syntax}
+
+# Naming --------------------------------------
+
+# Variable names
+## They use lowercase letters, numbers, and  _ . 
+## They should be nouns, adjectives, adverbs, but not prepositions or pronouns.E.g.: day_one, but not dayone or first_day
+
+# Function names
+# They use lowercase letters, numbers, and _ . 
+## They should be verbs, adjectives, adverbs, but not prepositions or pronouns. E.g.: add_row() instead of row_adder()
+
+# Argument names are either data or details.
+## Repeating the name of the data is not necessary. Repeating the name of the details is necessary.
+## mean (1:10, na.rm = TRUE)
+
+# Spacing ------------------------------------
+# average <- mean(feet / 12 + inches, na.rm = TRUE)
+# x <- 1:10
+# base::get
+# if (debug) show(x)
+# plot(x, y)
+# diamonds[5, ]
+
+# Curly braces -------------------------------
+y <- 0
+x <- 9
+
+if (y == 0) {
+  if (x > 0) {
+    log(x)
+  } else {
+    message("x is negative or zero")
+  }
+} else {
+  y ^ x
+}
+
+x <- if (y < 20) "Too low" else "Too high"
+
+# Long lines ---------------------------------
+
+#do_something_very_complicated(
+#  "that",
+#  requires = many,
+#  arguments = "some of which may be long"
+#)
+
+#long_function_name <- function(a = "a long argument",
+#                               b = "another argument",
+#                               c = "another long argument") {
+# 
+#}
+
+```
+
+```{r functions}
+
+# return() -----------------------------------
+
+# Only use  return()  for early returns. Otherwise rely on R to return the result of the last evaluated expression
+
+# Design principles ------------------------
+
+# A function is either a returning-value function or a side-effect function (like printing, plotting, or saving to disk), but not both at the same time.
+
+# A function should be understandable in isolation
+
+# Side-effect function ----------------------
+
+# The function should return the first argument invisibly.
+
+#print.url <- function(x, ...) {
+#  cat("Url: ", build_url(x), "\n", sep = "")
+#  invisible(x)
+#}
+
+# Avoid calling global options. If so, clean up after yourself with on.exit()
+
+```
+
+```{r pipes}
+
+# Introduction to pipe %>%. Clearly, z is smarter than y.
+x <- c(1,2,3,4,9,NA)
+
+y <- quantile(x, na.rm=TRUE)
+y <- max(y)
+y <- sqrt(y)
+
+z <- 
+  x %>%
+  quantile(na.rm=TRUE) %>%
+  max() %>%
+  sqrt()
+
+z == y
+
+```
+
+# Source
+
+```{r source}
+setwd(paste0("C:/Users/mdela/Dropbox/Prof/NUS/Projects/Modelling/Model", "/Analysis_and_documentation"))
+ww <- source("test.R", local=TRUE)
+
+ll(2)
+```
+
+# function error
+```{r}
+test_stop <- function (x){
+  if (x > 0) {
+    y <- sqrt(x)
+  } else {
+    stop("y smaller than 0")
+  }
+  y
+}
+
+test_stop(2)
+test_stop(-2)
+```
+
+# RMarkdown syntax
+
+*italics*
+
+**bold**
+
+superscript^2^
+
+~~striketrough~~
+
+[link, yes, click here!](www.rstudio.com)
+
+inline equation: $xxx$
+
+example inline equation: $A = \pi + \alpha * r^{(2+1)}$
+
+An equation in text that calcluate that `r 2` and `r 2` make `r 2 + 2`.
