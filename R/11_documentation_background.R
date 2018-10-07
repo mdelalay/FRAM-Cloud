@@ -711,7 +711,7 @@ VALUATION_SETTLEMENT_R <- function(asset_settlement_r, hazard_r, PAE, beta_param
 #' @param PAE A scalar for the probability of affected exposure.
 #' @param beta_param A vector of length 2 for the parameters of the beta distribution.
 #' @return A vector that contains "Expsre_PixelCount [count pixel]", "Expsre_TotalValue [mio NPR]", "DD_PixelCount [count pixel]","DD_TotalValue [mio NPR]", "ID_InYear [year]", "ID_TotalValue [mio NPR]", and "IDandDD_TotalValue [mio NPR]".
-VALUATION_FARMLAND_R <- function(asset_farmland_r, hazard_r, PAE, beta_param) {
+VALUATION_FARMLAND_R <- function(asset_farmland_r, hazard_r, PAE, beta_param, max_BI_duration) {
   #Exposure
   index_v <- which(!is.na(asset_farmland_r[]) & !is.na(hazard_r[]))
   EXPSR_CT <- length(index_v)
@@ -725,7 +725,7 @@ VALUATION_FARMLAND_R <- function(asset_farmland_r, hazard_r, PAE, beta_param) {
   DD_VL <- sum(asset_farmland_r[index_damaged_v] * MDD)
   # Indirect damages
   ID_CT <- 0
-  ID_VL <- DD_VL * 2
+  ID_VL <- DD_VL * max_BI_duration
   return (c(EXPSR_CT, EXPSR_VL, DD_CT, DD_VL, ID_CT, ID_VL))
 }
 
