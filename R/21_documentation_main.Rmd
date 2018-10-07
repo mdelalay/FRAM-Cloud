@@ -9,6 +9,7 @@ output:
     toc: yes
   html_document:
     toc: yes
+bibliography: library.bib
 ---
 
 # For the new user of this script
@@ -49,7 +50,7 @@ We install libraries and load packages.
 ```{r options}
 x <- c("actuar", "car", "devtools", "DiagrammeR", "dplyr", "fitdistrplus", 
        "ggmap", "ggplot2", "gtools", "grid",
-       "knitr", "lattice", "lmomRFA", "logspline", "lubridate", "maptools",
+       "knitr", "lattice", "lmomRFA", "logspline", "lubridate", "maptools", "memisc", 
        "raster",  "rasterVis", "readxl",  "reshape", "reshape2", "rgdal", "rgeos", "roxygen2", 
        "SDMTools", "sp", "splitstackshape", "stats", "stplanr","stringr" , "svDialogs", 
        "testthat", "tidyr", "tidyverse", "vcd", "xtable")
@@ -72,7 +73,7 @@ Here are instructions on how to set up **your_absolute_path** folder:
     - The input data in **your_absolute_path**/Data_Input from the Dropbox https://www.dropbox.com/sh/zogfjvimvxl5us9/AAB2fvb2jQL77BTu6K2i63Q2a?dl=0 
 - In addition, you can copy in the folders **your_absolute_path**/Data_OutputR,  **your_absolute_path**/ResultR, and **your_absolute_path**/man from the Dropbox
 
-In the unfortunate case where the directory in **absolute_path** is new despite the listed instructions, the following chunk generates the skeleton of a R Package. The purpose is to generate documentation of the built-in functions (see below). 
+In the unfortunate case where the directory in **absolute_path** is new (i.e., the listed instructions above were not correctly followed), the following chunk generates the skeleton of a R Package. The purpose is to generate documentation of the built-in functions (see below). 
 
 ```{r}
 absolute_path <- "C:/Users/mdela/Dropbox/Prof/NUS/Projects/Modelling/FRAM" # **your_abslolute_path**
@@ -84,12 +85,14 @@ We source the R file that contains the R functions.
 ```{r}
 setwd(paste0(absolute_path, "/R"))
 source("11_documentation_background.R", local=TRUE)
+#purl("21_documentation_main.Rmd") # to extract code from RMarkdown. The file should be removed to run the code chunk
 ```
 
 We create a package to document the built-in functions (i.e., to be able to use the **?** syntax). This creates **your_absolute_path**/man.
 
-```{r}
+```{r packaged, results = "hide"}
 document(absolute_path)
+ls("package:FRAM")
 ```
 
 Here is the description of indicators of the following code chunk as well as how the code is evaluated and knitted:
@@ -100,13 +103,15 @@ Here is the description of indicators of the following code chunk as well as how
 2. If indicators of what to plot and which code parts to run are set to `r TRUE`:
     - Output and results are overwritten and
     - This script takes about 4-5 hours (to be blamed on the developer of this script) to be evaluated,i.e., to run all chunks with 1000 simulations (which you might have to change in the code chunk below) and 6 combinations of scenarios.
-3. Always switch back to indicators' default values (i.e., back to `r FALSE`) when exiting the R project.
+3. If the indicator called "PV discount" is set to TRUE, the indirect damage is discounted. 
+4. Always switch back to indicators' default values (i.e., back to `r FALSE`) when exiting the R project.
 
 We set the indicators and directories. 
 
 ```{r indicators}
 whattodo       <- FALSE # time-consuming operations if set to TRUE
 whattoplot     <- FALSE # plots (can also be time-consuming if set to TRUE)
+PVdiscount     <- FALSE 
 nsim           <- 10
 
 input_path  <- paste0(absolute_path, "/Data_Input")
@@ -121,6 +126,28 @@ if(boolean_v) {
   whattodo <- TRUE; whattoplot <- TRUE
 } 
 ```
+
+Let's look at the data size in the input folder and the result and output folders.
+
+```{r}
+convert_to_MB = 0.0009765625 * 10^-3 # 1 byte in MB byte
+
+target_file <- input_path
+xx <- sum(file.size(list.files(target_file, all.files = TRUE, recursive = TRUE, include.dirs = FALSE, full.names = TRUE))) * convert_to_MB
+xx
+
+target_file <- output_path
+yy <- sum(file.size(list.files(target_file, all.files = TRUE, recursive = TRUE, include.dirs = FALSE, full.names = TRUE))) * convert_to_MB
+yy
+
+target_file <- result_path
+zz <- sum(file.size(list.files(target_file, all.files = TRUE, recursive = TRUE, include.dirs = FALSE, full.names = TRUE))) * convert_to_MB
+zz
+
+aa <- yy + zz
+```
+
+There is `r xx` MB of data in the input file, and `r yy + zz` MB of data in the result and output files. 
 
 We define parameters.
 
@@ -166,6 +193,7 @@ ASS_xls_df      <-   READ_EXCEL("D043_ASS.ID", input_path)
 VDC_xls_df      <-   READ_EXCEL("D045_VDC.ID", input_path) 
 FML_xls_df      <-   READ_EXCEL("D046_FML.ID", input_path)
 DISC_xls_df     <-   READ_EXCEL("D047_DISC.ID", input_path)
+DSTA_xls_df     <-   READ_EXCEL("D048_DSTA.ID", input_path)
 
 GEOL_xls_df     <-   READ_EXCEL("D053_GEOL.ID", input_path)
 DAT1_xls_df     <-   READ_EXCEL("D073_DAT1.ID", input_path)
@@ -186,7 +214,8 @@ districts_shp       <- OPEN_SHP(input_path, "E99_Nepal_districts_pgshp_ICIMOD")
 geol_shp            <- OPEN_SHP(input_path, "E99_Nepal_geology_pgshp_ICIMOD") 
 ldsd_shp            <- OPEN_SHP(input_path, "E99_Nepal_landslides_pgshp_ICIMOD") 
 boundary_rivers_shp <- OPEN_SHP(input_path, "E99_river_reaches_pgshp_ArcGIS") 
-road_shp            <- OPEN_SHP(input_path, "E99_road_lshp_ArcGIS") 
+road_shp            <- OPEN_SHP(input_path, "E99_road_lshp_ArcGIS")
+housedensity_shp    <- OPEN_SHP(input_path, "01_housedensity_ArcGIS")
 slope_r             <- OPEN_R  (input_path, "E99_slope_r_ArcGIS")
 aspect_r            <- OPEN_R  (input_path, "E99_aspect_r_ArcGIS")
 
@@ -216,6 +245,8 @@ The remainder of this model documentation is structured follows:
 5. Results
 6. Check of outputs to papers
 7. Appendices
+
+Finally, note that we use these authors among many others: [@hosking2005regional],[@harel2007multiple], and [@hosking1992moments]. 
 
 # Hazad module - data preparation
 
@@ -732,7 +763,16 @@ The following assumptions are made:
 3. Water stages across river reaches are independent; 
 4. Fitted distributions or distribution families can vary across river reaches.
 
-Data of mean daily water stage (H) and discharge (Q) were purchased from DHM in January 2017. H, Q, or both were measured by DHM with five manual hydrological stations. DHM provides no documentation on the type of hydrological stations, data management, and data processing. For example, data strongly suggest that rating curves are used to derive water height H from discharge Q or vice versa. However, we could not get confirmation from DHM of this assumption, nor could we obtain from DHM the rating curves used for the derivation of H from Q (or Q from H). 
+Data of mean daily water stage (H) and discharge (Q) were purchased from DHM in January 2017. H, Q, or both were measured by DHM with five manual hydrological stations. DHM provides no documentation on the type of hydrological stations, data management, and data processing. For example, data strongly suggest that rating curves are used to derive water height H from discharge Q or vice versa. However, we could not get confirmation from DHM of this assumption, nor could we obtain from DHM the rating curves used for the derivation of H from Q (or Q from H).
+
+The following sub-sections encompass the following steps:
+
+- Visual analysis of both Q and H data per station
+- Then, imputation of H from Q per station and per year with sufficient records of Q (i.e., >350 points/year). A loess model was applied.
+- Then, calculation of the maximum H per year per station
+- Finally, for each station, distributions are fitted to annual maxima using the method of L-moment. 
+
+
 
 ## Data pre-processing
 
@@ -890,7 +930,7 @@ bah2 <- gather(bah, d_type, val, H, Q) %>%  mutate(yr=year(date))
 
 Now we create a plot to visually compare:
 
-- When we have both H and Q (These sections can be used for training a loess (i.e., local regression) model)
+- When we have both H and Q (These sections can be used for training a loess (i.e., local regression) model). Loess models are a combination of linear least square regressions and non-linear regressions (the latter find the best fit among various distributions for a subset of the data)
 - When we only have Q, and not H. These are when we can predict H. If we can do this well, there is a significant stretch between 1987 to 1993 which could be improved.
 
 ```{r plot_H_Q}
@@ -918,7 +958,7 @@ xyplot(H ~ Q3, groups = as.factor(decade), data=bah_d,
        cex=0.5, type=c("smooth"), auto.key = list(columns=6))
 ```
 
-If we inspect the previous lattice plot (i.e., in the code chunk "2004_turningpoint"") closely, the year 2004 seems to demonstrate something of a turning point. Some points correspond to the elevated model of the plot in the chode chunk smoother_plot, while the rest seem to revert to the relationship that was present before the 1990s. Below is a zoomed-in version of the plot for 2004. The blue points correspond to the period before 2004-10-16. The pink points correspond to points after that. It is reasonable to assume that 2004-10-16 is the date the relationship reverted back to the earlier one.
+If we inspect the previous lattice plot (i.e., in the code chunk "2004_turningpoint"") closely, the year 2004 seems to demonstrate something of a turning point. Some points correspond to the elevated model of the plot in the code chunk smoother_plot, while the rest seem to revert to the relationship that was present before the 1990s. Below is a zoomed-in version of the plot for 2004. The blue points correspond to the period before 2004-10-16. The pink points correspond to points after that. It is reasonable to assume that 2004-10-16 is the date the relationship reverted back to the earlier one.
 
 ```{r}
 bah_2004 <- filter(bah, yr == 2004) %>% 
@@ -1254,6 +1294,11 @@ FMTD_KABLE(dd)
 ```
 
 ## Computing L-moments & L-moment Ratios
+
+We shall start with the rationale for using L-moments instead of the classic methods of moments:
+
+- L-moments are more robust to outliers than the standard moments. 
+- L-moments are also much less biased than method of moments estimators.
 
 In this section, we first compute the L-moments for each site except for Dolalghat (Indrawati). Following that, we perform a screening to test how different the sites are from one another. 
 
@@ -1839,13 +1884,15 @@ Elevation and size of study area:
 # Size of study area in km2
 area_buffered <- round(CALC_AREA(study_area_shp, byid_area = FALSE, unit_area = "km2"), 0)
 #Elevation range of study area in m
-dd <- quantile(E01_dem_r[])[c(1,3,5)]
+dd <- c(quantile(E01_dem_r[])[c(1,3,5)], sd(E01_dem_r[]))
 LULC_output_elevation_v <- as.data.frame(c(area_buffered, dd))
+rownames(LULC_output_elevation_v) <- c("study area [m2]", "min elevation [m]", "median elevation [m]", "max elevation [m]", "standard deviation of elevation [m]")
 ```
 
 Slope in degree:
 ```{r}
-LULC_output_slope_v <- as.data.frame(quantile(E01_slope_r[] / 100 * 90)[c(1,3,5)])
+LULC_output_slope_v <- as.data.frame(c(quantile(E01_slope_r[] / 100 * 90)[c(1,3,5)], sd(E01_slope_r[] / 100 * 90)))
+rownames(LULC_output_slope_v) <-  c("min slope [degree]", "median slope [degree]", "max slope [degree]", "standard deviation of slope [degree]")
 ```
 
 Aspect:
@@ -1911,9 +1958,18 @@ prod_all              <- cast(acc_df, formula = LULC ~ Technique, value = "Prod_
 prod_all$LULC         <- LULC_v
 colnames(prod_all)[1] <- "Producer's accuracy"
 
+prod_all2              <- as.data.frame(apply(prod_all[, 2:4], 2, function(x) (paste(round (x * 100, 0), "%", sep = ""))))
+prod_all2              <- cbind(LULC_v, prod_all2)
+colnames(prod_all2)    <- c("Producer's accuracy", colnames(prod_all)[2:4])
+
+
 user_all              <- cast(acc_df, formula = LULC ~ Technique, value = "User_acc")
 user_all$LULC         <- LULC_v
 colnames(user_all)[1] <- "User's accuracy"
+
+user_all2              <- as.data.frame(apply(user_all[, 2:4], 2, function(x) (paste(round (x * 100, 0), "%", sep = ""))))
+user_all2              <- cbind(LULC_v, user_all2)
+colnames(user_all2)    <- c("Producer's accuracy", colnames(user_all)[2:4])
 ```
 
 ```{r Kappa_OvAcc}
@@ -1991,19 +2047,21 @@ Table overall accuracies and Kappa:
 
 ```{r}
 todisplay <- bb[c(2,3,1),]
-FMTD_KABLE(as.data.frame(todisplay), rownames_bool = TRUE, digits_arg = 2)
+todisplay2 <- apply(todisplay, 2, function(x) (paste(round (x * 100, 0), "%", sep = "")))
+rownames(todisplay2) <- rownames(todisplay)
+FMTD_KABLE(as.data.frame(todisplay2), rownames_bool = TRUE, digits_arg = 2)
 ```
 
 Table of producer's accuracies:
 
 ```{r results="asis"}
-FMTD_KABLE(prod_all)
+FMTD_KABLE(prod_all2)
 ```
 
 Table of user's accuracies:
 
 ```{r results="asis"}
-FMTD_KABLE(user_all)
+FMTD_KABLE(user_all2)
 ```
 
 In the following chunks, bar charts are computed and aggregated in a plot frame. First, the dodged bar chart.
@@ -2015,7 +2073,7 @@ cbPalette       <- c("#CCCCCC", "#999999", "#666666")
 acc_df$Area_km2 <- LURE_xls_df$Area_km2 
 
 gg_area <- ggplot(data = acc_df[, -c(3, 4)], aes(x = LULC, y = Area_km2, fill = Technique)) +
-  theme(panel.background = element_rect(fill = "#FFFFCC", colour = 'white' )) +
+  theme(panel.background = element_rect(fill = 'white', colour = 'white' )) +
   theme(plot.background = element_rect(colour = 'black')) +
   geom_bar(stat="identity", position=position_dodge()) +
   scale_fill_manual(values=cbPalette) +
@@ -2036,7 +2094,7 @@ acc_df$Relative_Area_km2 <- acc_df$Area_km2 / sum(acc_df$Area_km2[1:6]) * 100
 levels(acc_df$LULC)      <- c("bare land", "farmland", "forest", "settlement", "snow", "water")
 
 gg_stacked <- ggplot(data = acc_df[, -c(3, 4)], aes(x = Technique , y = Relative_Area_km2, fill = LULC)) + 
-  theme(plot.background = element_rect(colour = 'black')) + 
+  theme(plot.background = element_rect(colour = 'black'), panel.background = element_rect(fill = 'white', colour = 'white' )) +
   geom_bar(stat="identity") +
   scale_fill_manual(values=cbPalette) + 
   labs(x = "Classification technique", y = "Area of LULC type in % of total classified area") + 
@@ -2224,7 +2282,8 @@ prod_el_plot <- ggplot(pred_prod_el) +
                 coord_cartesian(ylim=c(-1,6)) + 
                 facet_wrap( ~ LULC) + 
                 scale_y_continuous(breaks=c(0,2,4), labels=probs_2_plot) +
-                theme(axis.text.x=element_text(angle=45, hjust=1))
+                theme(axis.text.x=element_text(angle=45, hjust=1)) +
+                theme_bw()
 ```
 
 ```{r}
@@ -2247,7 +2306,8 @@ prod_sl_plot <- ggplot(pred_prod_sl) +
                 coord_cartesian(ylim=c(-1,6)) + 
                 facet_wrap( ~ LULC) + 
                 scale_y_continuous(breaks=c(0,2,4), labels=probs_2_plot) +
-                theme(axis.text.x=element_text(angle=45, hjust=1))
+                theme(axis.text.x=element_text(angle=45, hjust=1)) +
+                theme_bw()
 ```
 
 Multiplot of fitted producer's accuracies:
@@ -2323,7 +2383,8 @@ user_el_plot <-   ggplot(pred_user_el) +
                   coord_cartesian(ylim=c(-1,6)) + 
                   facet_wrap( ~ LULC) + 
                   scale_y_continuous(breaks=c(0,2,4), labels=probs_2_plot) +
-                  theme(axis.text.x=element_text(angle=45, hjust=1))
+                  theme(axis.text.x=element_text(angle=45, hjust=1)) +
+                  theme_bw()
 ```
 
 ```{r}
@@ -2345,7 +2406,8 @@ user_sl_plot <-   ggplot(pred_user_sl) +
                   coord_cartesian(ylim=c(-1,6)) + 
                   facet_wrap( ~ LULC) + 
                   scale_y_continuous(breaks=c(0,2,4), labels=probs_2_plot) +
-                  theme(axis.text.x=element_text(angle=45, hjust=1))
+                  theme(axis.text.x=element_text(angle=45, hjust=1)) +
+                  theme_bw()
 ```
 
 Multiplot of fitted user's accuracies:
@@ -2365,7 +2427,7 @@ prod_comp <- prod_all
 prod_comp$Udin <- COMP_xls_df[COMP_xls_df$Author =="Uddin" & COMP_xls_df$Mean_accuracy =="Prod", colnames(COMP_xls_df) == "Value"]
 prod_comp$Xue <- COMP_xls_df[COMP_xls_df$Author =="Xue" & COMP_xls_df$Mean_accuracy =="Prod", colnames(COMP_xls_df) == "Value"]
 prod_comp <- prod_comp[, -c(2,3)]
-colnames(prod_comp)[c(2,3,4)] <- c("This work (Random Forest)", "(Uddin et al., 2015)", "(Xue et al., 2017)")
+colnames(prod_comp)[c(2,3,4)] <- c("This work (Random Forest)", "Uddin et al., 2015", "Xue et al., 2017")
 ```
 
 ```{r Mean_user_acc}
@@ -2373,7 +2435,7 @@ user_comp <- user_all
 user_comp$Udin <- COMP_xls_df[COMP_xls_df$Author =="Uddin" & COMP_xls_df$Mean_accuracy =="User", colnames(COMP_xls_df) == "Value"]
 user_comp$Xue <- COMP_xls_df[COMP_xls_df$Author =="Xue" & COMP_xls_df$Mean_accuracy =="User", colnames(COMP_xls_df) == "Value"]
 user_comp <- user_comp[, -c(2,3)]
-colnames(user_comp)[c(2,3,4)] <- c("This work (Random Forest)", "(Uddin et al., 2015)", "(Xue et al., 2017)")
+colnames(user_comp)[c(2,3,4)] <- c("This work (Random Forest)", "Uddin et al., 2015", "Xue et al., 2017")
 ```
 
 Table of comparison with prior studies for producer's accuracies:
@@ -2764,9 +2826,42 @@ We have the following input data:
 cap_hh_per_pixel <- ASS_xls_df[12,5]
 VDC_r
 VDC_xls_df
+housedensity_shp
 ```
 
-We generate a raster that provides the code of the VDCs when the LULC recognises a settlement and we calculate the number of pixels with settlements per VDC.
+We validate the assumption of house density in two ways.
+
+The first way relies on:
+
+1. a digitisation of 22 polygons of settlements on a Base map of ArcGIS
+2. the visual estimation of the number of houses per polygons
+3. the mean over all polygons of the ratio of the number of houses per polygon to the area of the polygon
+```{r}
+hd_df <- round(housedensity_shp@data[, 1:2], 0)
+hd_df$densperpixel <- round(hd_df[, 2]/hd_df[, 1] * 900, 2)
+colnames(hd_df) <- c("Area [m2]", "Visual count of houses [house count]", "Number of houses per pixel [house count / (30mX30m)]")
+aa <- mean(hd_df[, 3])
+aa_km2 <- aa *1000000/900
+```
+
+With this approach, the mean number of houses per pixel amounts to `r aa`.
+
+Let's have a look at the attribute table of the digitised settlements and associated count of houses:
+
+
+```{r}
+FMTD_KABLE(hd_df)
+```
+
+The second way relies on the LULC map and CBS statistics and the assumption that there is one household per house. 
+
+In the second way, we do the following:
+
+1. we generate a raster that provides the code of the VDCs when the LULC recognises a settlement 
+2. we calculate the number of pixels with settlements per VDC.
+3. We have the number of household per VDC from CBS statistics.
+4. We divide the number of household per VDC with the number of settlement with pixels by VDC
+5. We assume that there is one household per house
 
 ```{r}
 if (whattodo) {
@@ -2787,7 +2882,9 @@ if (whattodo) {
 }
 ```
 
-We see that the median number of households per pixel is 4.01. We therefore use a number of households per pixel of `r round(cap_hh_per_pixel, 0)`that aims at representing villages in riparian areas. In addition, field observations in the study area suggest that riparian villages are in average more densily populated and that scattered hamlets are in average less densily populated. 
+We see that the median number of households per pixel is 4.01. 
+
+We use a number of houses per pixel of `r round(cap_hh_per_pixel, 0)`that aims at representing villages in riparian areas. In addition, field observations in the study area suggest that riparian villages are in average more densily populated and that scattered hamlets are in average less densily populated. 
 
 ### Settlement rasters
 
@@ -2947,7 +3044,7 @@ BI_pa_mioNPR_HH         <- dd/10^6 * 365 # per household per day, 2000 NPR of lo
 BI_pa_mioNPR_settlement <- y * BI_pa_mioNPR_HH
 ```
 
-(Relevant for damage paper, regarding indirect damage to settlements) Indirect damages for the category of assets settlement are the loss of income for communities from business related to roads and customs (e.g., porters, food catering and lodging, revenues from trade of goods and services) as roads remain closed because of direct damages they have incurred. In a simulation, indirect damages to settlements depend on the duration of road closure in the same simulation (i.e., indirect damage to roads; see above) and the following assumptions: there are about `r round(x/100,0)*100` households located close to roads and customs; business related to roads and customs is the main source of income for `r round(percent_road_business *100,0)`% of these households, each household earning from these activities `r round(dd, 0)` NPR per day. These assumptions are grounded in interviews on the field with members of the Armed Police Forces and villagers. The duration of road closure is multiplied with the annual income of communities from business related to roads and customs of `r round(BI_pa_mioNPR_settlement,0)` million NPR.
+(Relevant for model paper, regarding indirect damage to settlements) Indirect damages for the category of assets settlement are the loss of income for communities from business related to roads and customs (e.g., porters, food catering and lodging, revenues from trade of goods and services) as roads remain closed because of direct damages they have incurred. In a simulation, indirect damages to settlements depend on the duration of road closure in the same simulation (i.e., indirect damage to roads; see above) and the following assumptions: there are about `r round(x/100,0)*100` households located close to roads and customs; business related to roads and customs is the main source of income for `r round(percent_road_business *100,0)`% of these households, each household earning from these activities `r round(dd, 0)` NPR per day. These assumptions are grounded in interviews on the field with members of the Armed Police Forces and villagers. The duration of road closure is multiplied with the annual income of communities from business related to roads and customs of `r round(BI_pa_mioNPR_settlement,0)` million NPR.
 
 Last, indirect damages for the category of assets farmland are the loss of crop products because of long-term damages to agricultural fields caused by flood-waters. They are assumed to be twice the direct damage. 
 
@@ -3051,7 +3148,7 @@ if (whattodo){
         temp_a[i,1:6,1] <- VALUATION_HPP_R(asset_HPP_r_list[[m]], hazard_r, PAE, beta_param, BI_HPP_r_list[[m]], max_BI_duration , cap_BI_HPP)
         temp_a[i,1:6,2] <- VALUATION_ROAD_R(asset_road_r, hazard_r, PAE, beta_param, max_BI_duration, BI_pa_mioNPR_road, cap_BI_HPP)
         temp_a[i,1:6,3] <- VALUATION_SETTLEMENT_R(asset_settlement_r_list[[m]], hazard_r, PAE, beta_param)
-        temp_a[i,1:6,4] <- VALUATION_FARMLAND_R(asset_farmland_r, hazard_r, PAE, beta_param)
+        temp_a[i,1:6,4] <- VALUATION_FARMLAND_R(asset_farmland_r, hazard_r, PAE, beta_param, max_BI_duration)
         res_list[[2*j - hori_count]][i,,] <- temp_a[i,,]
         hori_count <- hori_count - 1
       }
@@ -3388,7 +3485,7 @@ mean_x <- mean(pop_dens_df$POP_DENS)
 
 In the VDCs contained in the study area, the population density is `r sum_x` with a mean population across VDCs of `r mean_x` people per km^2^. 
 
-# Output to: Damage paper
+# Output to: Model paper
 
 ## Study area
 
@@ -3444,7 +3541,7 @@ Other values:
 
 - Angle weight: `weights_for_angle`
 - Rock weight: `unique(GEOL_xls_df$Weight)`
-- Estmation indirect damage settlement: See above by Ctrl+ F without the quotation marks "Relevant for damage paper, regarding indirect damage to settlements"
+- Estmation indirect damage settlement: See above by Ctrl+ F without the quotation marks "Relevant for model paper, regarding indirect damage to settlements"
 - Number of house per pixel: `round(cap_hh_per_pixel, 0)`
 - Number of HPPs (existing): `dim(SHPP_xls_df[SHPP_xls_df$Status == "Operating", ])[1]`
 - Number of HPPs (planned, including in construction): `dim(SHPP_xls_df[SHPP_xls_df$Status != "Operating", ])[1]`
@@ -3458,6 +3555,63 @@ The data we use is:
 ```{r results = "hide"}
 res_all_df <- readRDS(paste0(result_path,"/Agg_results.rds")) # as an alternative to read.table(paste(output_path, "/results", sep=""), sep="\t", header=TRUE)
 FX
+ir_year_sc <- ASS_xls_df[21, 5]
+```
+
+
+```{r discounting}
+
+
+if (PVdiscount) {
+  
+  # Initialise
+  res_all_df[res_all_df$ValueOf %in% "ID_InYear [year]" & res_all_df$ElementAtRisk %in% "farmland", colnames(res_all_df) == "Value" ] <- max_BI_duration # In the above random sampling, the count of years for farmland is not updated. Therefore, we do the udpate here.  
+  outer_loop <- unique(res_all_df$Scenario) 
+  discounted_res_all_df <- data.frame()
+  remember_order <- unique(res_all_df$ElementAtRisk)
+  
+  i <- 1
+  # Loops
+  for (i in 1:length(outer_loop)){
+    # start of loop 1
+    split_df <- res_all_df[res_all_df$Scenario == outer_loop[i], ]
+    split_df <- split_df[, ! colnames(split_df) == "Scenario"]
+    remember_colnames <- colnames(split_df)
+    cast_a <- acast(split_df, nsim ~ ValueOf ~ ElementAtRisk, value.var = "Value")
+    
+    j <- 4
+    for (j in 1:(dim(cast_a)[3]-1)) {
+      matrix_df <- data.frame(cast_a[, , j])
+      colnames(matrix_df) <- unlist(dimnames(cast_a)[2]) 
+      CF <- matrix_df$'ID_TotalValue [mio NPR]' / (matrix_df$'ID_InYear [year]' * 12)
+      Discount_factor_nom <- (1 + ir_year_sc/12)^(matrix_df$'ID_InYear [year]' * 12) - 1
+      Discount_factor_denom <- ir_year_sc/12 * (1 + ir_year_sc/12)^(matrix_df$'ID_InYear [year]' * 12)
+      Indirect_Damage_v <- CF * Discount_factor_nom / Discount_factor_denom # see https://www.vertex42.com/ExcelArticles/discount-factors.html. Assumptions: (1) monthly compound period; (2) monthly interest rate equal to annual interest rate / 12; (3) the future value of damage is distributed uniformly over the time period that the indirect damage spans
+      # Indirect_Damage_v <-  matrix_df$'ID_TotalValue [mio NPR]' * 1 / (1 + ir_year_sc/12)^(matrix_df$'ID_InYear [year]' * 12) Assumptions: (1) monthly compound period; (2) monthly interest rate equal to annual interest rate / 12; (3) the future value of damage is associated with the end of the period than the indirect damage spans.
+      matrix_df$`ID_TotalValue [mio NPR]` <- Indirect_Damage_v
+      matrix_df$`IDandDD_TotalValue [mio NPR]` <- matrix_df$`ID_TotalValue [mio NPR]` + matrix_df$`DD_TotalValue [mio NPR]`
+      cast_a[, , j] <- as.matrix(matrix_df)
+    }
+    
+    cast_a[, , 5] <- apply(cast_a[, , 1:4], c(1, 2), sum)
+    cast_a[, dimnames(cast_a)[2][[1]] %in% c("ID_InYear [year]") , 5] <- 999999
+    split_df <- melt.array(cast_a)
+    colnames(split_df) <- remember_colnames
+    split_df$Scenario <-outer_loop[i]
+    
+    discounted_res_all_df <- rbind(discounted_res_all_df, split_df)
+    
+  }
+  
+  discounted_res_all_df <- discounted_res_all_df[colnames(res_all_df)]
+  res_all_df <- discounted_res_all_df
+  
+  # to compare (delete when the chunk is final)
+  #mean(discounted_res_all_df[discounted_res_all_df$ValueOf == "DD_TotalValue [mio NPR]" & discounted_res_all_df$ElementAtRisk == "settlement" & discounted_res_all_df$Scenario == "99.9%-quantile for high-exposure scenario" , colnames(discounted_res_all_df) == "Value"])
+  
+  #mean(res_all_df[res_all_df$ValueOf == "DD_TotalValue [mio NPR]" & res_all_df$ElementAtRisk == "settlement" & res_all_df$Scenario == "99.9%-quantile for high-exposure scenario" , colnames(res_all_df) == "Value"])
+}
+
 ```
 
 We first look at the data and take a subset.
@@ -3472,7 +3626,8 @@ unique_asset <- levels(res_all_df$ElementAtRisk)
 index_sc      <- res_all_df$Scenario %in% c("50%-quantile for low-exposure scenario", 
                                             "50%-quantile for high-exposure scenario",
                                             "99.9%-quantile for low-exposure scenario",
-                                            "99.9%-quantile for high-exposure scenario")
+                                            "99.9%-quantile for high-exposure scenario",
+                                            "99%-quantile for high-exposure scenario")
 index_valueof <- res_all_df$ValueOf %in% c("DD_TotalValue [mio NPR]", 
                                            "ID_TotalValue [mio NPR]", 
                                            "IDandDD_TotalValue [mio NPR]" )
@@ -3507,6 +3662,29 @@ des_stat_res_df$CoV <- des_stat_res_df$St_Dev / des_stat_res_df$Mean
 
 ### Tables for low scenario
 
+The input data are:
+
+```{r results="hide"}
+
+# Risk bearer: HPP
+percent_HW 
+percent_PH 
+cost_mioNPR_per_MW
+BI_pa_mioNPR_per_MW
+
+# Risk bearer: Government of Nepal
+
+capitaGDP_USD_sc <- ASS_xls_df[20,5]
+popSK_count_sc <- sum(VDC_xls_df$Population)
+
+# Risk bearer: local population
+cap_hh_per_pixel
+mean_hh_size
+capitaGDP_USD_sc
+value_house_2017 
+value_house_2030
+```
+
 First, the mean (TableR 1).
 
 ```{r}
@@ -3529,10 +3707,49 @@ mean_res_low_df <- mean_res_low_df[, short_name3_v]
 mean_res_low_df[,1] <- label_damage_type_v 
 colnames(mean_res_low_df) <- my_col_name
 TableR_1 <- mean_res_low_df
-TableR_1[, -1] <- SIMPLE_ROUND(TableR_1[, -1])
 
+# Preparation for barchart
+damage_low_chart_df           <- as.data.frame(TableR_1)
+damage_low_chart_df           <- reshape2::melt(damage_low_chart_df, id = my_col_name[1])
+colnames(damage_low_chart_df) <- c("Damage_type", "Asset_category", "Value")
+damage_low_chart_df           <- damage_low_chart_df[damage_low_chart_df$Damage_type %in% c("Direct damage", "Indirect damage") & damage_low_chart_df$Asset_category %in% c("HPP", "Road", "Settlement"), ]
+damage_low_chart_df$Scenario  <- "Low scenario"
+
+# Print table
+TableR_1[, -1] <- SIMPLE_ROUND(TableR_1[, -1])
 FMTD_KABLE(TableR_1, rownames_bool = FALSE, digits_args = 1, align_args = c("l", rep("r",5)))
 ```
+
+Then, the mean and standard deviation (Table 1 also):
+
+```{r}
+# define criteria rows
+short_name3_v <- c("ValueOf", "HPP", "road", "settlement", "farmland", "Total_ElementsAtRisk")
+this_scenario <- c("50%-quantile for low-exposure scenario")
+
+# row and column name
+first_col_name <- c(label_damage_type_v)
+my_col_name    <- c("Low scenario", label_elements_v)
+
+# Unselect  columns
+c_select_v <- !colnames(des_stat_res_df) %in% c("CoV", "Mean")
+sd_res_df <- des_stat_res_df[,c_select_v]
+
+# Cast low scenario
+sd_res_low_df <- sd_res_df[sd_res_df$Scenario == this_scenario, !colnames(sd_res_df) %in% c("Scenario")]
+sd_res_low_df <- cast(sd_res_low_df, formula = ValueOf ~ ElementAtRisk, value="St_Dev")
+sd_res_low_df <- sd_res_low_df[, short_name3_v]
+sd_res_low_df[,1] <- label_damage_type_v 
+colnames(sd_res_low_df) <- my_col_name
+TableR_1a <- sd_res_low_df
+
+# Print table
+TableR_1a[, -1] <- SIMPLE_ROUND(TableR_1a[, -1])
+TableR_1b <- TableR_1a
+TableR_1b[, 2:6] <- matrix(paste(as.matrix(TableR_1[, 2:6]), "(", as.matrix(TableR_1a[, 2:6]), ")"), nrow = 3)
+FMTD_KABLE(TableR_1b, rownames_bool = FALSE, digits_args = 1, align_args = c("l", rep("r",5)))
+```
+
 
 Then, the contribution of elements (TableR 2).
 
@@ -3547,7 +3764,7 @@ TableR_2 <- low_element_m
 FMTD_KABLE(TableR_2, rownames_bool = FALSE, digits_args = 1, align_args = c("l", rep("r",5)))
 ```
 
-Finally, the contribution of damage type (TableR 3).
+Then, the contribution of damage type (TableR 3).
 
 ```{r}
 # Contribution of damage type
@@ -3558,6 +3775,41 @@ low_damage_m <- cbind(first_col_name, bb)
 colnames(low_damage_m) <- my_col_name
 TableR_3 <- low_damage_m
 FMTD_KABLE(TableR_3, rownames_bool = FALSE, align_args = c("l", rep("r",5)))
+```
+
+Finally, the ratio of direct damage to income
+
+```{r}
+
+# First, select data
+ 
+DDLow_mioUSD_v <- c(mean_res_low_df[1, 2], mean_res_low_df[1, 3], sum(mean_res_low_df[1, 4:5]))
+
+# Then, calculate income
+## HPP
+incomeHPP_ratio_sc <-  BI_pa_mioNPR_per_MW / ((percent_PH + percent_HW) * cost_mioNPR_per_MW)
+incomeHPP_mioUSD_sc <- DDLow_mioUSD_v[1] * incomeHPP_ratio_sc # (income_x / estimated damage) =  (assumed annual revenue per MW / assumed damage per MW)
+
+## Government of Nepal
+incomegov_mioUSD_sc <- capitaGDP_USD_sc * 10^(-6) * popSK_count_sc
+
+## Local population
+popaffected_count_sc <-  as.numeric(DDLow_mioUSD_v[3] / (value_house_2017 / 100) * cap_hh_per_pixel * mean_hh_size) 
+incomepop_mioUSD_sc <- capitaGDP_USD_sc * 10^(-6) * popaffected_count_sc
+
+income_mioUSD_v <- c(incomeHPP_mioUSD_sc, incomegov_mioUSD_sc, incomepop_mioUSD_sc)
+
+# Then, create table to knit
+
+ratiotemp_v <- DDLow_mioUSD_v / income_mioUSD_v
+DDLow_mioUSD_v <- as.character(round(DDLow_mioUSD_v, 1))
+income_mioUSD_v <- as.character(round(income_mioUSD_v, 1))
+ratiotemp_v <- as.character(round(ratiotemp_v, 3))
+
+compareriskbearers_mioUSD_df <- as.data.frame(rbind(DDLow_mioUSD_v, income_mioUSD_v, ratiotemp_v))
+rownames(compareriskbearers_mioUSD_df) <- c("Direct damage (low scenario)", "Annual income (low scenario)", "Damage relative to annual income" )
+colnames(compareriskbearers_mioUSD_df) <- c("HPPs", "Government", "Local population")
+FMTD_KABLE(compareriskbearers_mioUSD_df, rownames_bool = TRUE)
 ```
 
 ### Tables for high scenario
@@ -3577,16 +3829,54 @@ my_col_name <- c("High scenario, mean value in million USD", label_elements_v)
 c_select_v <- !colnames(des_stat_res_df) %in% c("CoV", "St_Dev")
 mean_res_df <- des_stat_res_df[,c_select_v]
 
-# Caste low scenario
+# Caste high scenario
 mean_res_high_df <- mean_res_df[mean_res_df$Scenario == this_scenario, !colnames(mean_res_df) %in% c("Scenario")]
 mean_res_high_df <- cast(mean_res_high_df, formula = ValueOf ~ ElementAtRisk, value="Mean")
 mean_res_high_df <- mean_res_high_df[, short_name3_v]
 mean_res_high_df[,1] <- label_damage_type_v 
 colnames(mean_res_high_df) <- my_col_name
 TableR_4 <- mean_res_high_df
-TableR_4[, -1] <- SIMPLE_ROUND(TableR_4[, -1])
 
+# Preparation for barchart
+damage_high_chart_df           <- as.data.frame(TableR_4)
+damage_high_chart_df           <- reshape2::melt(damage_high_chart_df, id = my_col_name[1])
+colnames(damage_high_chart_df) <- c("Damage_type", "Asset_category", "Value")
+damage_high_chart_df           <- damage_high_chart_df[damage_high_chart_df$Damage_type %in% c("Direct damage", "Indirect damage") & damage_high_chart_df$Asset_category %in% c("HPP", "Road", "Settlement"), ]
+damage_high_chart_df$Scenario  <- "High scenario"
+
+# Print table
+TableR_4[, -1] <- SIMPLE_ROUND(TableR_4[, -1])
 FMTD_KABLE(TableR_4, rownames_bool = FALSE, digits_args = 1, align_args = c("l", rep("r",5)))
+```
+
+Then, the mean and standard deviation (Table 4 also):
+
+```{r}
+# define criteria rows
+short_name3_v <- c("ValueOf", "HPP", "road", "settlement", "farmland", "Total_ElementsAtRisk")
+this_scenario <- c("99.9%-quantile for high-exposure scenario")
+
+# row and column name
+first_col_name <- c(label_damage_type_v)
+my_col_name <- c("High scenario", label_elements_v)
+
+# Unselect  columns
+c_select_v <- !colnames(des_stat_res_df) %in% c("CoV", "Mean")
+sd_res_df <- des_stat_res_df[,c_select_v]
+
+# Cast high scenario
+sd_res_high_df <- sd_res_df[sd_res_df$Scenario == this_scenario, !colnames(sd_res_df) %in% c("Scenario")]
+sd_res_high_df <- cast(sd_res_high_df, formula = ValueOf ~ ElementAtRisk, value="St_Dev")
+sd_res_high_df <- sd_res_high_df[, short_name3_v]
+sd_res_high_df[,1] <- label_damage_type_v 
+colnames(sd_res_high_df) <- my_col_name
+TableR_4a <- sd_res_high_df
+
+# Print table
+TableR_4a[, -1] <- SIMPLE_ROUND(TableR_4a[, -1])
+TableR_4b <- TableR_4a
+TableR_4b[, 2:6] <- matrix(paste(as.matrix(TableR_4[, 2:6]), "(", as.matrix(TableR_4a[, 2:6]), ")"), nrow = 3)
+FMTD_KABLE(TableR_4b, rownames_bool = FALSE, digits_args = 1, align_args = c("l", rep("r",5)))
 ```
 
 Then, the contribution of elements (TableR 5).
@@ -3602,7 +3892,7 @@ TableR_5 <- high_element_m
 FMTD_KABLE(TableR_5, rownames_bool = FALSE, align_args = c("l", rep("r",5)))
 ```
 
-Finally, the contribution of damage type (TableR 6).
+Then, the contribution of damage type (TableR 6).
 
 ```{r}
 # Contribution of damage type
@@ -3613,6 +3903,41 @@ high_damage_m <- cbind(first_col_name, bb)
 colnames(high_damage_m) <- my_col_name
 TableR_6 <- high_damage_m
 FMTD_KABLE(TableR_6, rownames_bool = FALSE, align_args = c("l", rep("r",5)))
+```
+
+Finally, the ratio of direct damage to income.
+
+```{r}
+
+# First, select data
+ 
+DDHigh_mioUSD_v <- c(mean_res_high_df[1, 2], mean_res_high_df[1, 3], sum(mean_res_high_df[1, 4:5]))
+
+# Then, calculate income
+## HPP
+incomeHPP_ratio_sc <-  BI_pa_mioNPR_per_MW / ((percent_PH + percent_HW) * cost_mioNPR_per_MW)
+incomeHPP_mioUSD_sc <- DDHigh_mioUSD_v[1] * incomeHPP_ratio_sc # (income_x / estimated damage) =  (assumed annual revenue per MW / assumed damage per MW)
+
+## Government of Nepal
+incomegov_mioUSD_sc <- capitaGDP_USD_sc * 10^(-6) * popSK_count_sc
+
+## Local population
+popaffected_count_sc <-  as.numeric(DDHigh_mioUSD_v[3] / (value_house_2030 / 100) * cap_hh_per_pixel * mean_hh_size) 
+incomepop_mioUSD_sc <- capitaGDP_USD_sc * 10^(-6) * popaffected_count_sc
+
+income_mioUSD_v <- c(incomeHPP_mioUSD_sc, incomegov_mioUSD_sc, incomepop_mioUSD_sc)
+
+# Then, create table to knit
+
+ratiotemp_v <- DDHigh_mioUSD_v / income_mioUSD_v
+DDHigh_mioUSD_v <- as.character(round(DDHigh_mioUSD_v, 1))
+income_mioUSD_v <- as.character(round(income_mioUSD_v, 1))
+ratiotemp_v <- as.character(round(ratiotemp_v, 3))
+
+compareriskbearers_mioUSD_df <- as.data.frame(rbind(DDHigh_mioUSD_v, income_mioUSD_v, ratiotemp_v))
+rownames(compareriskbearers_mioUSD_df) <- c("Direct damage (high scenario)", "Annual income (high scenario)", "Damage relative to annual income" )
+colnames(compareriskbearers_mioUSD_df) <- c("HPPs", "Government", "Local population")
+FMTD_KABLE(compareriskbearers_mioUSD_df, rownames_bool = TRUE)
 ```
 
 ### Other tables
@@ -3706,7 +4031,6 @@ CoV_res_df <- des_stat_res_df[,c_select_v]
 CoV_res_high_df <- CoV_res_df[CoV_res_df$Scenario == this_scenario, !colnames(CoV_res_df) %in% c("Scenario")]
 CoV_res_high_df <- cast(CoV_res_high_df, formula = ValueOf ~ ElementAtRisk, value="CoV")
 CoV_res_high_df <- CoV_res_high_df[, short_name3_v]
-CoV_res_high_df <- SIMPLE_ROUND_PC(CoV_res_high_df * 100, 2)
 CoV_res_high_df <- cbind(label_damage_type_v, CoV_res_high_df) 
 colnames(CoV_res_high_df) <- my_col_name
 TableR_10 <- CoV_res_high_df
@@ -3726,9 +4050,117 @@ size_vul_farmland_high <- round(mean(res_all_df$Value[row_select_high]) * 900 / 
 
 ```
 
-### Plots
+### Sensitivity analysis for high exposure: 99 vs 99.9
 
-Prepare loop.
+First, the mean for the 99%-quantile.
+
+```{r}
+# define criteria rows
+short_name3_v <- c("ValueOf", "HPP", "road", "settlement", "farmland", "Total_ElementsAtRisk")
+this_scenario <- c("99%-quantile for high-exposure scenario")
+
+# row and column name
+first_col_name <- c(label_damage_type_v)
+my_col_name <- c("Analysis of sensitivity to flood raster layer", label_elements_v)
+
+# Unselect  columns
+c_select_v <- !colnames(des_stat_res_df) %in% c("CoV", "St_Dev")
+mean_res_df <- des_stat_res_df[,c_select_v]
+
+# Caste high scenario
+mean_res_high_df <- mean_res_df[mean_res_df$Scenario == this_scenario, !colnames(mean_res_df) %in% c("Scenario")]
+mean_res_high_df <- cast(mean_res_high_df, formula = ValueOf ~ ElementAtRisk, value="Mean")
+mean_res_high_df <- mean_res_high_df[, short_name3_v]
+mean_res_high_df[,1] <- label_damage_type_v 
+colnames(mean_res_high_df) <- my_col_name
+TableR_S1 <- mean_res_high_df
+```
+
+Then, the mean for the 99.9%-quantile (i.e., same as Table 4 above).
+
+```{r}
+# define criteria rows
+short_name3_v <- c("ValueOf", "HPP",
+                    "road", "settlement", "farmland", "Total_ElementsAtRisk")
+this_scenario <- c("99.9%-quantile for high-exposure scenario")
+
+# row and column name
+first_col_name <- c(label_damage_type_v)
+my_col_name <- c("Analysis of sensitivity to flood raster layer", label_elements_v)
+
+# Unselect  columns
+c_select_v <- !colnames(des_stat_res_df) %in% c("CoV", "St_Dev")
+mean_res_df <- des_stat_res_df[,c_select_v]
+
+# Caste high scenario
+mean_res_high_df <- mean_res_df[mean_res_df$Scenario == this_scenario, !colnames(mean_res_df) %in% c("Scenario")]
+mean_res_high_df <- cast(mean_res_high_df, formula = ValueOf ~ ElementAtRisk, value="Mean")
+mean_res_high_df <- mean_res_high_df[, short_name3_v]
+mean_res_high_df[,1] <- label_damage_type_v 
+colnames(mean_res_high_df) <- my_col_name
+TableR_S2 <- mean_res_high_df
+```
+
+Merge table for the 99-% quantile with difference
+```{r}
+aaa <- round((TableR_S1[, 2:6] - TableR_S2[, 2:6])/TableR_S2[, 2:6] * 100, 0)
+aaa <- as.matrix(apply(aaa, 2, function(x_df) (paste("(", x_df, "%)", sep = ""))))
+aaa <- matrix(paste(as.matrix(SIMPLE_ROUND(TableR_S1[, 2:6])), aaa), nrow = 3)
+TableR_S3 <- TableR_S2
+TableR_S3[, 2:6] <- aaa
+FMTD_KABLE(TableR_S3, rownames_bool = FALSE, digits_args = 1, align_args = c("l", rep("r",5)))
+```
+
+
+
+```{r}
+# Print table
+FMTD_KABLE(TableR_4, rownames_bool = FALSE, digits_args = 1, align_args = c("l", rep("r",5)))
+```
+
+### Bar chart and plots
+
+Let's produce the bar chart first.
+
+```{r fig.height= 5, fig.width=8}
+dev.off()
+damage_chart_df          <- rbind(damage_low_chart_df, damage_high_chart_df)
+damage_chart_df[, 1]     <- as.factor(damage_chart_df[, 1])
+damage_chart_df[, 2]     <- as.factor(damage_chart_df[, 2])
+damage_chart_df[, 4]     <- factor(as.factor(damage_chart_df[, 4]), c("Low scenario", "High scenario"))
+
+gg_damage <- ggplot(data = damage_chart_df, aes(x = Asset_category, y = Value, fill = Damage_type)) +
+              theme(plot.background = element_rect(colour = 'black'))  +  
+              geom_bar(stat="identity") +
+              facet_grid(.~ Scenario) +
+              labs(x = "Asset category", y = "Value in million USD") + 
+              theme(axis.text=element_text(size=10), axis.title=element_text(size=12)) +
+              theme(legend.title=element_blank())
+
+gg_damage
+
+```
+
+Let's produce the bar chart for direct damage only. 
+
+```{r fig.height= 5, fig.width=8}
+dev.off()
+damage_chart_df_temp          <- damage_chart_df[damage_chart_df$Damage_type %in% "Direct damage", ]
+damage_chart_df_temp <- damage_chart_df_temp[, -1]
+
+gg_damage2 <- ggplot(data = damage_chart_df_temp, aes(x = Asset_category, y = Value)) +
+              theme(plot.background = element_rect(colour = 'black'))  +  
+              geom_bar(stat="identity", fill = "#FF6666") +
+              facet_grid(.~ Scenario) +
+              labs(x = "Asset category", y = "Value in million USD") + 
+              theme(axis.text=element_text(size=10), axis.title=element_text(size=12)) +
+              theme(legend.title=element_blank())
+
+gg_damage2
+
+```
+
+Then, do the graphs for the direct damage. Prepare loop for graphs.
 
 ```{r}
 short_name3_v   <- c("ValueOf", "HPP", "road", "settlement", "farmland", "Total_ElementsAtRisk")
@@ -3737,7 +4169,7 @@ round_at        <- c(1, 2, 1, 4)
 plot_l          <- list()
 ```
 
-Low scenario.
+Start with the low scenario (direct damage).
 ```{r}
 # Unselect rows and columns
 this_scenario <- c("50%-quantile for low-exposure scenario")
@@ -3767,7 +4199,7 @@ for (i in 1:length(to_loop)) {
                    plot.title = element_text(size=14, hjust=0.5),
                    axis.text=element_text(size=8, angle=45)) +
         geom_line(stat = "density", colour = my_colour[i] ) +
-        labs( x = "Value [m USD]", y = "Probability density", title = my_title[i]) +
+        labs( x = "Value [m USD]", y = "Empirical frequency", title = my_title[i]) +
         theme(plot.title = element_text(colour = my_colour[i], face = "bold", size = (8))) +
         scale_x_continuous(limits = label_limits, breaks = label_breaks, labels = label_names) +
         scale_y_continuous(breaks = NULL)
@@ -3776,7 +4208,7 @@ for (i in 1:length(to_loop)) {
 
 ```
 
-High scenario.
+High scenario (direct damage).
 ```{r} 
 # Unselect rows and columns
 this_scenario <- c("99.9%-quantile for high-exposure scenario")
@@ -3807,7 +4239,102 @@ for (i in 1:length(to_loop)) {
                    plot.title = element_text(size=14, hjust=0.5),
                    axis.text=element_text(size=8, angle=45)) +
         geom_line(stat = "density", colour = my_colour[i]) +
-        labs( x = "Value [m USD]", y = "Probability density", title = my_title[i]) +
+        labs( x = "Value [m USD]", y = "Empirical frequency", title = my_title[i]) +
+        theme(plot.title = element_text(colour = my_colour[i], face = "bold", size = (8))) +
+        scale_x_continuous(limits = label_limits, breaks = label_breaks, labels = label_names) +
+        scale_y_continuous(breaks = NULL)
+  plot_l[[i + length(to_loop)]] <- d1
+}
+```
+
+```{r fig.height=5, fig.width=9}
+ordered_plot_l <- list(plot_l[[1]], plot_l[[5]],
+                       plot_l[[2]], plot_l[[6]],
+                       plot_l[[3]], plot_l[[7]],
+                       plot_l[[4]], plot_l[[8]]) 
+MULTIPLOT(plotlist = ordered_plot_l, cols = 4)
+```
+
+Then, do the graphs for the indirect damage. Prepare loop for graphs.
+
+```{r}
+short_name3_v   <- c("ValueOf", "HPP", "road", "settlement", "farmland", "Total_ElementsAtRisk")
+to_loop         <- c("HPP", "road", "settlement", "farmland")
+round_at        <- c(1, 2, 1, 4)
+plot_l          <- list()
+```
+
+Start with the low scenario (indirect damage).
+```{r}
+# Unselect rows and columns
+this_scenario <- c("50%-quantile for low-exposure scenario")
+r_select_v <- res_df$Scenario == this_scenario & res_df$ValueOf == "ID_TotalValue [mio NPR]" & res_df$ElementAtRisk != "Total_ElementsAtRisk" 
+low_plot_df <- res_df[r_select_v, ]
+low_plot_df <- low_plot_df[, colnames(low_plot_df) %in% c("ElementAtRisk", "Value")]
+
+#Prepare loop
+my_title  <- c("HPPs \n(indirect damage, low scenario)", 
+             "Roads \n(indirect damage, low scenario)", 
+             "Houses \n(indirect damage, low scenario)",
+             "Farmland \n(indirect damage, low scenario)")
+my_colour <- c("slateblue1",  "springgreen4", "cyan3", "green2")
+
+# Loop
+for (i in 1:length(to_loop)) {
+ data_to_plot <- low_plot_df[low_plot_df$ElementAtRisk == to_loop[i], ]
+  min_tick <- min(data_to_plot$Value)
+  med_tick <- min(data_to_plot$Value) +(max(data_to_plot$Value) - min(data_to_plot$Value)) /2
+  max_tick <-  max(data_to_plot$Value)
+  label_breaks <- c(min_tick, med_tick, max_tick)
+  label_limits <- label_breaks[c(1,3)]
+  label_names <- sprintf(paste0("%.",round_at[i], "f"), round(label_breaks, round_at[i]))
+  d1 <- ggplot(data = data_to_plot, aes(Value)) +
+        theme(plot.background = element_rect(colour = 'lightgrey'),
+                   axis.title=element_text(size=10), 
+                   plot.title = element_text(size=14, hjust=0.5),
+                   axis.text=element_text(size=8, angle=45)) +
+        geom_line(stat = "density", colour = my_colour[i] ) +
+        labs( x = "Value [m USD]", y = "Empirical frequency", title = my_title[i]) +
+        theme(plot.title = element_text(colour = my_colour[i], face = "bold", size = (8))) +
+        scale_x_continuous(limits = label_limits, breaks = label_breaks, labels = label_names) +
+        scale_y_continuous(breaks = NULL)
+  plot_l[[i]] <- d1
+}
+
+```
+
+High scenario (indirect damage).
+```{r} 
+# Unselect rows and columns
+this_scenario <- c("99.9%-quantile for high-exposure scenario")
+r_select_v <- res_df$Scenario == this_scenario & res_df$ValueOf == "ID_TotalValue [mio NPR]" & res_df$ElementAtRisk != "Total_ElementsAtRisk" 
+low_plot_df <- res_df[r_select_v, ]
+low_plot_df <- low_plot_df[, colnames(low_plot_df) %in% c("ElementAtRisk", "Value")]
+
+#Prepare loop
+my_title  <- c("HPPs \n(indirect damage, high scenario)", 
+             "Roads \n(indirect damage, high scenario)", 
+             "Houses \n(indirect damage, high scenario)",
+             "Farmland \n(indirect damage, high scenario)")
+
+my_colour <- c("tomato1", "yellow3", "darkorange3", "coral4")
+
+# Loop
+for (i in 1:length(to_loop)) {
+  data_to_plot <- low_plot_df[low_plot_df$ElementAtRisk == to_loop[i], ]
+  min_tick <- min(data_to_plot$Value)
+  med_tick <- min(data_to_plot$Value) +(max(data_to_plot$Value) - min(data_to_plot$Value)) /2
+  max_tick <-  max(data_to_plot$Value)
+  label_breaks <- c(min_tick, med_tick, max_tick)
+  label_limits <- label_breaks[c(1,3)]
+  label_names <- sprintf(paste0("%.",round_at[i], "f"), round(label_breaks, round_at[i]))
+  d1 <- ggplot(data = data_to_plot, aes(Value)) +
+        theme(plot.background = element_rect(colour = 'lightgrey'),
+                   axis.title=element_text(size=10), 
+                   plot.title = element_text(size=14, hjust=0.5),
+                   axis.text=element_text(size=8, angle=45)) +
+        geom_line(stat = "density", colour = my_colour[i]) +
+        labs( x = "Value [m USD]", y = "Empirical frequency", title = my_title[i]) +
         theme(plot.title = element_text(colour = my_colour[i], face = "bold", size = (8))) +
         scale_x_continuous(limits = label_limits, breaks = label_breaks, labels = label_names) +
         scale_y_continuous(breaks = NULL)
@@ -4056,7 +4583,7 @@ GPS_xls_df
 The dataframe is converted to a SpatialPointsDataFrame.
 
 ```{r}
-GPSpoints_shp <- TRANSFORM_TABLE_SHP(GPS_xls_df)
+NGPSpoints_shp <- TRANSFORM_TABLE_SHP(GPS_xls_df)
 
 options(warn = -1)
 if (whattodo) (GPSpoints_shp <- SAVEandOPEN_SHP(GPSpoints_shp,output_path, "E01_GPS_ptshp_OutR"))
@@ -4064,6 +4591,51 @@ options(warn = 0)
 
 GPSpoints_shp <- OPEN_SHP(output_path, "E01_GPS_ptshp_OutR")
 ```
+
+
+## Descriptive statistics for the interview section
+
+Descriptive statistics related to gender, economic status, and ethnicity at the level of the Sindhupalchok District are put together here.
+
+The input data is the following:
+```{r results= "hide"}
+DSTA_xls_df
+```
+
+We plot the data to produce the bar charts used in the thesis.
+
+```{r}
+DSTA_xls_df$Category <- as.factor(DSTA_xls_df$Category)
+
+bb <- group_by(DSTA_xls_df, Stratum) %>%
+      mutate(percent = Count / sum(Count) * 100) %>%
+      ungroup()
+
+count_of_v <- unique(bb$Count_basis)
+plot_l          <- list()
+
+for (i in 1:length(count_of_v)){
+  
+aa <- ggplot(bb[bb$Count_basis %in% count_of_v[i], ], aes(x = Category, y = Count))
+aa <- aa +  geom_bar(stat = 'identity', position = 'dodge', fill = "orange")
+aa <- aa + facet_grid(.~Stratum, scales="free_x", space = "free_x")
+aa <- aa + theme(plot.background = element_rect(colour = 'lightgrey'),
+                 axis.title = element_text(size=12),
+                 plot.title = element_text(size=12, hjust=0.5),
+                 axis.text = element_text(size=12, angle=45),
+                 strip.text.x = element_text(size = 12),
+                 axis.title.x = element_blank())
+aa <- aa + ylab(paste0("Count of ", count_of_v[i]))
+aa <- aa + geom_text(aes(y = Count + 5000, label = paste0(round(percent, 1), '%')), position = position_dodge(width = .9), size = 4) # the argument y nudges above top of bar
+
+plot_l[[i]] <- aa
+
+}
+
+MULTIPLOT(plotlist = plot_l, cols = 2)
+
+```
+
 
 ## Github
 
@@ -4082,4 +4654,6 @@ Third, create a Git folder /FRAM-Cloud/R by creating a Git dummy file in a Git f
 Fourth, drag files in the desktop folder /R  to the Git folder /R. Remove the Git dummy file.
 
 Last, drag files of the desktop folder FRAM, such as the FRAM.RProj and GITIGNORE, in the Git repository. 
+
+# References
 
