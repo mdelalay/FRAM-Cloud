@@ -3,19 +3,17 @@ title: "Flow charts for methods and modelling steps"
 author: "Marie Delalay"
 date: ''
 output:
-  pdf_document:
-    toc: yes
   html_document:
     df_print: kable
     fig_caption: yes
     highlight: zenburn
     number_sections: yes
     toc: yes
-  word_document:
+  pdf_document:
     toc: yes
 ---
 
-FIRST: READ THE LINES BELOW UNTIL THE FIRST TITLE.
+# Instructions and set-up
 
 This file contains flow charts of modelling steps and methods.
 
@@ -42,9 +40,13 @@ lapply(x, library, character.only = TRUE)
 #### Knit options ####
 knitr::opts_chunk$set(echo = FALSE, message=FALSE, error=FALSE, warning=FALSE, results="asis", fig.cap = "", include = TRUE) # For more on chunk options, see: https://yihui.name/knitr/options/
 
-absolute_path <- "C:/Users/mdela/Dropbox/Prof/NUS/Projects/Modelling/Model"  # **your-abslolute_path**
+absolute_path <- "C:/Users/mdela/Dropbox/Prof/NUS/Projects/Modelling/FRAM"  # **your-abslolute_path**
 
-#Function to save as .snv (thanks to Kevin Mader)
+setwd(paste0(absolute_path, "/Flow charts"))
+
+
+
+  #Function to save as .snv (thanks to Kevin Mader)
 WRITE_AS_SVG <-function(in_graph, out_name = "test.svg") {
   out_svg<-file(out_name, "w")
   writeLines(DiagrammeRsvg::export_svg(in_graph), out_svg)
@@ -52,8 +54,6 @@ WRITE_AS_SVG <-function(in_graph, out_name = "test.svg") {
   print(paste0(out_name, " in folder"))
 }
 ```
-
-# Template
 
 Results of the template are hidden. 
 
@@ -86,9 +86,10 @@ name_xxx_empty <-
         # [5] edges      
         subgraph cluster { 
         edge [color = grey, arrowhead = vee, arrowtail = none]
+xxx -> '@@1'
         }
         
-        }
+  }
         
         ")
 
@@ -97,7 +98,7 @@ name_xxx_empty
 #WRITE_AS_SVG(name_xxx_empty,"nice.svg")
 ```
 
-# Modelling steps of the vulnerability and damage papers
+# Modelling steps of the vulnerability and model papers
 
 ## Overview flow model
 
@@ -170,6 +171,71 @@ name_010 <-
 name_010
 ```
 
+```{r}
+name_010 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] intermediary data / output data
+        node [color = gray, shape = box, style = filled, fillcolor= gray, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = white]
+        ## Overview flow model
+        'i-th flood raster (i in [1,2])';
+        'i-th possible toe raster (i in [1,2])';
+        'Output of hazard module'        
+        'k-th LULC raster (k in [1,2])'        
+        'Pixel value in USD per asset category'
+        'Output of asset module';
+        '(i*j)-th Monte-Carlo simulation (j in [1,1000])'        
+        'Sampled landslide raster';
+        'Sampled hazard raster'
+        'PAE'
+        'Exposure raster'
+        'Sampled MDDs'
+        'J sampled damage values for flood i and exposure k'   
+        
+
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 26, fontcolor = black]
+        'I. hazard module'
+        'II. asset module'
+        'III. aggregation module'
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges      
+        subgraph cluster_11 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'I. hazard module' -> {'i-th flood raster (i in [1,2])''i-th possible toe raster (i in [1,2])'}
+        {'i-th flood raster (i in [1,2])''i-th possible toe raster (i in [1,2])'} -> 'Output of hazard module' 
+        }
+        
+        # [5] edges      
+        subgraph cluster_12 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'II. asset module' -> {'k-th LULC raster (k in [1,2])''Pixel value in USD per asset category'}
+        {'k-th LULC raster (k in [1,2])''Pixel value in USD per asset category'} -> 'Output of asset module'
+        }
+        
+        # [5] edges      
+        subgraph cluster_13 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'Output of asset module' 'Output of hazard module'} -> 'III. aggregation module'
+        'III. aggregation module' -> '(i*j)-th Monte-Carlo simulation (j in [1,1000])'        
+        {'(i*j)-th Monte-Carlo simulation (j in [1,1000])'} -> {'Sampled landslide raster'; 'Sampled MDDs'}
+        'Sampled landslide raster' -> 'Sampled hazard raster'
+        {'Sampled hazard raster' 'PAE'} -> 'Exposure raster'
+        {'Exposure raster''Sampled MDDs'} ->  'J sampled damage values for flood i and exposure k' 
+        }
+        
+        }
+        ")
+
+name_010
+```
 
 ## (01) - Hazard module: Floods, data preparation
 
@@ -883,6 +949,8 @@ name_120 <-
 name_120
 ```
 
+# Consolidated view
+
 ## Consolidated modules - all
 
 ```{r, results="asis"}
@@ -1419,6 +1487,8 @@ name_1000 <-
         ")
 
 name_1000
+
+WRITE_AS_SVG(name_1000,"name_1000.svg")
 
 ```
 
@@ -2087,7 +2157,6 @@ name_000 <-
 
 name_000
 
-#WRITE_AS_SVG(name_000,"000.svg")
 
 ```
 
@@ -2142,7 +2211,6 @@ name_010 <-
         ")
 
 name_010
-#WRITE_AS_SVG(name_010,"010.svg")
 ```
 
 ## Supporting elements to livelihoods
@@ -2209,11 +2277,8 @@ name_020 <-
 
 name_020
 
-#WRITE_AS_SVG(name_020,"020.svg")
 
 ```
-
-# Methods by paper
 
 ## LULC paper: Methods
 
@@ -2226,9 +2291,9 @@ name_400 <-
         
         # [1] data not present in previous stages / response in general
         node [color = gray, shape = oval, style = filled, fillcolor= gray, fontname = Helvetica, fixedsize = false, fontsize = 14, fontcolor = white]
-        'Sentinel-2 Level-1A'
+        'Sentinel-2 data'
         'Ground control points (GCPs)'
-        'Topographical thresholds'
+        'Topographic thresholds'
         
         # [2] data present in next stage / final output
         node [color = gray, shape = triangle, style = filled, fillcolor= gray, fontname = Helvetica, fixedsize = false, fontsize = 14, fontcolor = white]
@@ -2248,16 +2313,15 @@ name_400 <-
         'Validation GCPs'
         'Validation'
         'Confusion matrices (n = 3)'
-        'Confusion matrices by topographical category (n = 18)'
+        'Confusion matrices by topographic category (n = 18)'
         'Kappa coefficient and Kappa standard deviation'
-        'Producer, user, and overall accuracy'
-        'Selection of map of highest accuracy'
-        'Producer and user accuracy'
+        'Accuracies'
+        'Accuracies '
         'General linear models'
-        'Variables associated with producer and user accuracy'
+        'Variables associated with accuracies'
         
         # [6] title names
-        node [shape = plaintext, style = filled, fillcolor= gray, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = white]
+        node [shape = plaintext, style = filled, fillcolor= gray, fontname = Helvetica, fixedsize = false, fontsize = 14, fontcolor = white]
         
         # [4] sort or separate
         subgraph {
@@ -2267,7 +2331,7 @@ name_400 <-
         # [5] edges      
         subgraph cluster1 { 
         edge [color = grey, arrowhead = vee, arrowtail = none]
-        'Sentinel-2 Level-1A'                     -> 'Cloud correction'
+        'Sentinel-2 data'                         -> 'Cloud correction'
         'Cloud correction'                        -> 'Median for each band' 
         'Ground control points (GCPs)'                                    -> {'Training GCPs' 'Validation GCPs'}
         {'Median for each band' 'Training GCPs'}  -> 'Classification'
@@ -2280,12 +2344,12 @@ name_400 <-
         # [5] edges      
         subgraph cluster2 { 
         edge [color = grey, arrowhead = vee, arrowtail = none]
-        'Validation'                              -> {'Confusion matrices (n = 3)' 'Confusion matrices by topographical category (n = 18)'}        
-        'Confusion matrices (n = 3)'              -> {'Kappa coefficient and Kappa standard deviation' 'Producer, user, and overall accuracy'}
-        {'Kappa coefficient and Kappa standard deviation' 'Producer, user, and overall accuracy'} -> 'Selection of map of highest accuracy'
-        {'Confusion matrices by topographical category (n = 18)''Topographical thresholds'} -> 'Producer and user accuracy'
-        'Producer and user accuracy'              -> 'General linear models'
-        'General linear models'                   -> 'Variables associated with producer and user accuracy'
+        'Validation'                              -> {'Confusion matrices (n = 3)' 'Confusion matrices by topographic category (n = 18)'}        
+        'Confusion matrices (n = 3)'              -> {'Kappa coefficient and Kappa standard deviation' 'Accuracies'}
+        {'Kappa coefficient and Kappa standard deviation' 'Accuracies'} -> 'Selection of map of highest accuracy'
+        {'Confusion matrices by topographic category (n = 18)''Topographic thresholds'} -> 'Accuracies '
+        'Accuracies '              -> 'General linear models'
+        'General linear models'                   -> 'Variables associated with accuracies'
         }
         
         }
@@ -2294,8 +2358,1021 @@ name_400 <-
 
 name_400
 
-#WRITE_AS_SVG(name_400, "to LULC paper.svg")
 ```
+
+
+
+## Insurance paper: Objective
+
+```{r}
+
+
+name_440 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        node [color = gray, shape = box, style = filled, fillcolor= gray, fontname = Helvetica, fixedsize = false, fontsize = 14, fontcolor = white]
+        '(1A) Lack of flood risk assessment in terms of economic damage'
+        '(2A) Lack of model-driven guidance towards flood insurance scheme'
+        '(3A) Failed flood insurance provision structure'
+        '(4A) Gap in flood insurance protection'
+        '(5A) Lack of flood disaster risk reduction'
+
+        node [color = lightblue, shape = box, style = filled, fillcolor= lightblue, fontname = Helvetica, fixedsize = false, fontsize = 14, fontcolor = black]
+        '(1B) Flood risk assessment in terms of economic damage'
+        '(3B) Improved flood insurance provision structure'
+        '(4B) Increased flood insurance protection'
+        '(5B) Improved flood disaster risk reduction'
+
+        node [color = red, shape = box, style = filled, fillcolor= lightblue, fontname = Helvetica, fixedsize = false, fontsize = 14, fontcolor = black]
+        '(2B) Model-driven guidance towards flood insurance scheme'
+        
+        
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = black]
+'(A) Unaddressed gap in flood insurance protection'
+'(B) Addressed gap in flood insurance protection'
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges      
+        subgraph cluster1 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        '(A) Unaddressed gap in flood insurance protection' -> '(1A) Lack of flood risk assessment in terms of economic damage' 
+        '(1A) Lack of flood risk assessment in terms of economic damage' -> '(2A) Lack of model-driven guidance towards flood insurance scheme'
+        '(2A) Lack of model-driven guidance towards flood insurance scheme' -> '(3A) Failed flood insurance provision structure'
+        '(3A) Failed flood insurance provision structure' -> '(4A) Gap in flood insurance protection'
+        '(4A) Gap in flood insurance protection' -> '(5A) Lack of flood disaster risk reduction'
+        
+        }
+        
+        # [5] edges      
+        subgraph cluster2 { 
+        edge [color = lightblue, arrowhead = vee, arrowtail = none]
+        '(B) Addressed gap in flood insurance protection' -> '(1B) Flood risk assessment in terms of economic damage'    
+        '(1B) Flood risk assessment in terms of economic damage' -> '(2B) Model-driven guidance towards flood insurance scheme'
+        '(2B) Model-driven guidance towards flood insurance scheme' -> '(3B) Improved flood insurance provision structure'
+        '(3B) Improved flood insurance provision structure' -> '(4B) Increased flood insurance protection'
+        '(4B) Increased flood insurance protection' -> '(5B) Improved flood disaster risk reduction'
+        }
+        
+        }
+        
+        ")
+
+name_440
+
+WRITE_AS_SVG(name_440,"name_440.svg")
+
+```
+
+
+# for New Re presentation
+
+## Model flow
+```{r, results="hide"}
+
+name_301 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] data not present in previous stages / response in general
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'Data output'
+'Model documentation as .docx'
+        
+        # [2] data present in next stage / final output
+        node [color = orange, shape = triangle, style = filled, fillcolor= OldLace, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [3] operations  / conditions or questions                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'Analysis on R (3 .R* files)'
+'Data export'
+'Knit .Rmd file'
+        
+        # [7] data from previous stages  / response in model
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'Primary and secondary data'
+'Pre-analysis'
+'Data input (6 GB)'
+
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 'Data export' 'Knit .Rmd file'
+        }
+        
+        # [5] edges      
+        subgraph cluster { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        }
+{'Primary and secondary data' 'Pre-analysis'} -> 'Data input (6 GB)'
+'Data input (6 GB)' -> 'Analysis on R (3 .R* files)'
+'Analysis on R (3 .R* files)' -> {'Data export' 'Knit .Rmd file'}
+'Data export' -> 'Data output'
+'Knit .Rmd file' -> 'Model documentation as .docx'
+        
+        }
+        
+        ")
+
+name_301
+WRITE_AS_SVG(name_301,"name_301.svg")
+
+```
+
+## Model flow, transition
+```{r, results="hide"}
+
+name_305 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] data not present in previous stages / response in general
+        node [color = white, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = lightgrey]
+'Data output'
+'Model documentation as .docx'
+        
+        # [2] data present in next stage / final output
+        node [color = orange, shape = triangle, style = filled, fillcolor= OldLace, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [3] operations  / conditions or questions                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = black]
+'Analysis on R (3 .R* files)'
+
+
+# [3] operations  / conditions or questions                
+        node [color = white, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = lightgrey]
+'Data export'
+'Knit .Rmd file'
+        
+        # [7] data from previous stages  / response in model
+        node [color = white, shape = oval, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = lightgrey]
+'Primary and secondary data'
+'Pre-analysis'
+'Data input (6 GB)'
+
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 'Data export' 'Knit .Rmd file'
+        }
+        
+        # [5] edges      
+        subgraph cluster { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        }
+{'Primary and secondary data' 'Pre-analysis'} -> 'Data input (6 GB)'
+'Data input (6 GB)' -> 'Analysis on R (3 .R* files)'
+'Analysis on R (3 .R* files)' -> {'Data export' 'Knit .Rmd file'}
+'Data export' -> 'Data output'
+'Knit .Rmd file' -> 'Model documentation as .docx'
+        
+        }
+        
+        ")
+
+name_305
+WRITE_AS_SVG(name_305,"name_305.svg")
+
+```
+
+## Overview flow model
+
+```{r}
+name_310 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] intermediary data / output data
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        ## Overview flow model
+        'Flood raster (i in [1,I])';
+        'Possible toe raster (i in [1,I])';
+        'Output of hazard module'        
+        'HPP value raster (k in [1,K]) ';
+        'Road value raster ';
+        'Settlement value raster (k in [1,K]) ';
+        'Farmland value raster';
+        'Output of asset module';
+        'Sampled landslides and hazard rasters';
+        'PAE and sampled MDD';
+        'Distribution of direct and ind. damages'   
+        
+        # [3] operations                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        ## aggregation module        
+        'Monte-Carlo simulations (j in [1,J])'
+
+        
+        # [7] input data
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        'I. hazard module'
+        'II. asset module'
+        'III. aggregation module'
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges      
+        subgraph cluster_11 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'I. hazard module' -> {'Flood raster (i in [1,I])' 'Possible toe raster (i in [1,I])'}
+        {'Flood raster (i in [1,I])' 'Possible toe raster (i in [1,I])'} -> 'Output of hazard module'
+        }
+        
+        # [5] edges      
+        subgraph cluster_12 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'II. asset module' -> {'HPP value raster (k in [1,K]) ' 'Road value raster ''Settlement value raster (k in [1,K]) ''Farmland value raster'}
+        {'HPP value raster (k in [1,K]) ' 'Road value raster ''Settlement value raster (k in [1,K]) ''Farmland value raster'} -> 'Output of asset module'
+        }
+        
+        # [5] edges      
+        subgraph cluster_13 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        {'Output of asset module' 'Output of hazard module'} -> 'III. aggregation module'
+        'III. aggregation module' -> 'Monte-Carlo simulations (j in [1,J])'
+        {'Monte-Carlo simulations (j in [1,J])'} -> {'Sampled landslides and hazard rasters' 'PAE and sampled MDD'}
+        {'Sampled landslides and hazard rasters' 'PAE and sampled MDD'} -> 'Distribution of direct and ind. damages'
+        }
+        
+        }
+        ")
+
+name_310
+WRITE_AS_SVG(name_310,"name_310.svg")
+```
+
+## Overview detailed flow model
+
+See above `r name_1000`
+
+## Risk hedging
+
+Assuming that :
+- we are looking at weather-related risk
+- risk reduction strategies were carried out except for financial risk transfer (i.e, hedging)
+- low-frequency-high-severity are hedged with weather derivatives
+- high-frequency-low-severity are covered with insurance products
+
+Note that:
+
+- For Cat insurance, governements can further transfer risk to insurance industry and capital markets (see *)
+- For hedging by insurance and hedge fund industries (see **)
+   - 'diversification across risk and asset classes'
+   - 'diversification via pooling' 
+   - 'hedging'
+
+```{r, results="hide"}
+
+name_320 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] Risk-bearers
+        node [color = darkgrey, shape = box, style = filled, fillcolor= lightgrey, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        'low-frequency and high-severity'
+        'initial risk-bearers: individuals, businesses, and governments' 
+        'risk retention' 
+        'risk transfer to'
+        'governments*' 
+        'insurance industry and capital market'   
+        'individuals, businesses, and governments'
+        
+        # [7] data from previous stages  / response in model
+        node [shape = box, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        'high-frequency and low-severity'
+        'initial risk-bearers: businesses and governments'
+        'risk hedging' 
+        'no hedging'
+        'insurance and hedge fund industries**'
+        'businesses and governments'
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 26]
+        'weather-related events'
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+
+        # [5] edges      
+        subgraph cluster0 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]      
+        'weather-related events' -> {'high-frequency and low-severity' 'low-frequency and high-severity'}
+        }
+        
+        # [5] edges      
+        subgraph cluster1 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'high-frequency and low-severity' -> 'initial risk-bearers: businesses and governments'
+        'initial risk-bearers: businesses and governments' -> {'risk hedging' 'no hedging'}
+        'risk hedging' -> {'insurance and hedge fund industries**'}
+        'no hedging' -> 'businesses and governments'
+        }
+
+ # [5] edges      
+        subgraph cluster2 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'low-frequency and high-severity' -> 'initial risk-bearers: individuals, businesses, and governments' 
+        'initial risk-bearers: individuals, businesses, and governments' -> {'risk retention' 'risk transfer to'}
+        'risk transfer to' -> {'governments*' 'insurance industry and capital market'}   
+        'risk retention' -> 'individuals, businesses, and governments'
+        } 
+}
+
+        ")
+
+name_320
+WRITE_AS_SVG(name_320,"name_320.svg")
+```
+
+# Thesis: topologies
+
+```{r}
+name_522 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] intermediary data / output data
+        node [color = gray, shape = box, style = filled, fillcolor= gray, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = white]
+        ## Overview flow model
+'Scientific knowledge'
+'Real-world uncertainties (epistemic and random)'
+'Limited understanding of real world'
+'Stochasticity'
+'Assumptions, governing equations, and parameters'
+'Modelling uncertainties (model and parameter)'
+'Validated model'
+'Model results'
+'Quantified modelling uncertainties'
+'Error propagation if stochastic model'
+'Sensitivity analysis'
+
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 26, fontcolor = black]
+        'FROM REAL WORLD'
+        '*MODEL DEVELOPMENT'
+        '*MODEL OUTPUTS'
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same; 
+        }
+        
+        # [5] edges      
+        subgraph cluster_11 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'FROM REAL WORLD' -> {'Scientific knowledge' 'Real-world uncertainties (epistemic and random)'}
+        {'Scientific knowledge' 'Real-world uncertainties (epistemic and random)'} -> 'Limited understanding of real world'
+        }
+        
+        # [5] edges      
+        subgraph cluster_12 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Limited understanding of real world' -> '*MODEL DEVELOPMENT'
+        '*MODEL DEVELOPMENT' -> {'Stochasticity' 'Assumptions, governing equations, and parameters' 'Modelling uncertainties (model and parameter)'}
+        {'Stochasticity' 'Assumptions, governing equations, and parameters' 'Modelling uncertainties (model and parameter)'} -> 'Validated model'
+       }
+        
+        # [5] edges      
+        subgraph cluster_13 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Validated model' -> '*MODEL OUTPUTS'
+        '*MODEL OUTPUTS' -> {'Model results' 'Quantified modelling uncertainties'}
+        'Quantified modelling uncertainties' -> {'Error propagation if stochastic model''Sensitivity analysis'}
+        
+}
+        
+        }
+        ")
+
+name_522
+WRITE_AS_SVG(name_522,"name_522.svg")
+```
+
+## from disaster risk to direct and indirect damage
+```{r, results="hide"}
+
+name_1100 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] Risk-bearers
+        node [color = darkgrey, shape = box, style = filled, fillcolor= lightgrey, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        'Combination of hazard and vulnerability (see (B))'
+        'Flood risk (see (A))'
+        'Flood hazard' 
+        'Vulnerability' 
+        'Physical vulnerability'
+        'Income'
+        'Other physical vulnerability'
+        'Attitudinal vulnerability' 
+        'Institutional vulnerability'   
+        'Flood disaster'
+        'Adverse consequences'
+        'Financial consequences'
+        'Other financial consequences'
+        'Non-financial consequences'
+
+        
+        # [7] data from previous stages  / response in model
+        node [color = darkgreen, shape = box, style = filled, fillcolor= lightgreen, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        'Assets'
+
+        # [7] data from previous stages  / response in model
+        node [color = darkblue, shape = box, style = filled, fillcolor= lightblue, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        'Direct damage'
+        'Indirect damage'
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 26]
+        '(A) Flood risk'
+        '(B) Combination of hazard and vulnerability'
+        
+        # [4] sort or separate
+        subgraph  {
+        rank = same;
+        }
+
+        # [5] edges      
+        subgraph cluster0 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]      
+        
+        }
+        
+        # [5] edges      
+        subgraph cluster1 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Combination of hazard and vulnerability (see (B))'-> '(A) Flood risk'
+        '(A) Flood risk' -> {'Flood hazard''Vulnerability'} 
+        'Vulnerability' -> {'Physical vulnerability' 'Attitudinal vulnerability''Institutional vulnerability'} 
+        'Physical vulnerability' -> {'Income''Assets''Other physical vulnerability' }
+
+        }
+
+ # [5] edges      
+        subgraph cluster2 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        '(B) Combination of hazard and vulnerability' -> 'Flood risk (see (A))'
+        'Flood risk (see (A))' -> 'Flood disaster'
+        'Flood disaster' -> 'Adverse consequences'
+        'Adverse consequences' -> {'Financial consequences' 'Non-financial consequences'}
+        'Financial consequences' -> {'Direct damage' 'Indirect damage''Other financial consequences'}
+
+        } 
+}
+
+        ")
+
+name_1100
+WRITE_AS_SVG(name_1100,"name_1100.svg")
+```
+
+## From disaster risk management to measures for DRR 
+```{r, results="hide"}
+
+name_1200 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] Risk-bearers
+        node [color = darkgrey, shape = box, style = filled, fillcolor= lightgrey, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'Political and economic institutions'
+'Flood risk management'
+'Flood risk governance'
+'Flood risk reduction (FRR)'
+'Financial consequences underlying flood risk'
+'Non-financial consequences underlying flood risk'
+'Measures for FRR '
+'Loss control'
+'Loss financing'
+'Risk diversification or withdrawal'
+'Hedging'
+'Risk retention'
+'Measures for FRR'
+'Flood hazard preparedness'
+'Flood disaster response'
+'Flood disaster recovery'
+'Other measures'
+
+
+        
+        # [7] data from previous stages  / response in model
+        node [color = red, shape = box, style = filled, fillcolor= pink, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'Risk transfer'
+
+        # [7] data from previous stages  / response in model
+        node [color = darkgreen, shape = box, style = filled, fillcolor= lightblue, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        'Flood early warning systems'
+        'Involvement of local communities'
+        'Model-based flood risk assessment'
+
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 26]
+
+        
+        # [4] sort or separate
+        subgraph  {
+        rank = same;
+        }
+
+        # [5] edges      
+        subgraph cluster0 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]      
+        'Political and economic institutions' -> 'Flood risk management'        
+        'Flood risk management' -> 'Flood risk governance'
+        'Flood risk governance' -> 'Flood risk reduction (FRR)'
+        }
+        
+        # [5] edges      
+        subgraph cluster1 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Flood risk reduction (FRR)' -> 'Financial consequences underlying flood risk'
+        'Financial consequences underlying flood risk' -> 'Measures for FRR '
+        'Measures for FRR ' -> {'Loss control''Loss financing''Risk diversification or withdrawal'}
+        'Loss financing' -> {'Hedging''Risk retention''Risk transfer'}
+
+        }
+
+ # [5] edges      
+        subgraph cluster2 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Flood risk reduction (FRR)' -> 'Non-financial consequences underlying flood risk'
+        'Non-financial consequences underlying flood risk' -> 'Measures for FRR'
+        'Measures for FRR' -> {'Flood hazard preparedness''Flood disaster response''Flood disaster recovery'}
+        'Flood hazard preparedness'-> {'Flood early warning systems''Involvement of local communities''Model-based flood risk assessment''Other measures'}
+
+        } 
+}
+
+        ")
+
+name_1200
+WRITE_AS_SVG(name_1200,"name_1200.svg")
+```
+
+## From papers to research questions
+
+```{r, results="hide"}
+
+name_1300 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] Risk-bearers
+        node [color = none, shape = box, style = filled, fillcolor= lightblue, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'Theoretical framework and methods'
+
+
+        # [1] Risk-bearers
+        node [color = none, shape = box, style = filled, fillcolor= lightgreen, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'Four papers, with the following flow of results:'
+'LULC paper'
+'Vulnerability paper'
+'Model paper'
+'Insurance paper'
+
+
+        # [1] Risk-bearers
+        node [color = none, shape = box, style = filled, fillcolor= lightyellow, fontname = 
+        Helvetica, fixedsize = false, fontsize = 20]
+'First research question'
+'Second research question'
+'Third research question'
+'Fourth research question'
+
+        node [color = none, shape = box, style = filled, fillcolor= pink, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'Means and objective of dissertation'
+
+
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 26]
+
+        
+        # [4] sort or separate
+        subgraph  {
+        rank = same; 'First research question''Second research question''Third research question''Fourth research question'
+        }
+
+        # [5] edges      
+        subgraph { 
+        edge [color = darkgrey, arrowhead = vee, arrowtail = none]
+'Theoretical framework and methods' -> 'Four papers, with the following flow of results:'
+
+'LULC paper' -> {'Vulnerability paper''Model paper'}
+'Model paper' -> 'Insurance paper'
+'Vulnerability paper' -> {'Model paper''First research question''Third research question'}
+'Model paper' -> 'Second research question'
+'Insurance paper' -> 'Fourth research question'
+{'First research question''Second research question''Third research question''Fourth research question'} -> 'Means and objective of dissertation'
+
+        } 
+
+        # [5] edges      
+        subgraph { 
+        edge [color = white, arrowhead = vee, arrowtail = none]
+
+'Four papers, with the following flow of results:' -> {'LULC paper' 'Vulnerability paper''Model paper''Insurance paper'}
+
+
+        } 
+}
+
+        ")
+
+name_1300
+WRITE_AS_SVG(name_1300,"name_1300.svg")
+```
+
+## From conceptual framework to objective
+
+```{r, results="hide"}
+
+name_1300 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] Risk-bearers
+        node [color = none, shape = box, style = filled, fillcolor= lightblue, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'Conceptual framework'
+'Modelling framework and ensuing methods'
+'Recommendation methods'
+
+        
+        # [1] Risk-bearers
+        node [color = none, shape = box, style = filled, fillcolor= lightyellow, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'First and second research questions'
+'Third and fourth research questions'
+
+        # [1] Risk-bearers
+        node [color = none, shape = box, style = filled, fillcolor= lightgreen, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'Papers'
+'Papers '
+
+
+
+        # [1] Risk-bearers
+        node [color = none, shape = box, style = filled, fillcolor= pink, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'Results of the FRAM'
+'Recommendations for FRR'
+'Objective of the dissertation'
+
+
+
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 26]
+
+        
+        # [4] sort or separate
+        subgraph  {
+        rank = same; 'Results of the FRAM''Recommendations for FRR'
+        }
+
+        # [5] edges      
+        subgraph { 
+        edge [color = darkgrey, arrowhead = vee, arrowtail = none]
+'Conceptual framework' -> {'Modelling framework and ensuing methods''Recommendation methods'}
+'Modelling framework and ensuing methods' -> 'Papers '
+'Papers ' -> 'First and second research questions'
+'First and second research questions' -> 'Results of the FRAM'
+'Recommendation methods' -> 'Papers'
+'Papers' -> 'Third and fourth research questions'
+'Third and fourth research questions' -> 'Recommendations for FRR'
+'Results of the FRAM' -> 'Recommendations for FRR'
+{'Recommendations for FRR'} -> 'Objective of the dissertation'
+
+
+
+        }
+        
+
+
+}
+
+        ")
+
+name_1300
+WRITE_AS_SVG(name_1300,"name_1300.svg")
+```
+
+## Conclusion: from conceptual framework to contributions
+
+
+```{r, results="hide"}
+
+name_1305 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] Risk-bearers
+        node [color = none, shape = box, style = filled, fillcolor= lightblue, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'(BB1) Theoretical framework'
+'(BB2) Methods'
+
+        
+        # [1] Risk-bearers
+        node [color = none, shape = box, style = filled, fillcolor= lightyellow, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'(BB5) Research questions are answered'
+
+
+        # [1] Risk-bearers
+        node [color = none, shape = box, style = filled, fillcolor= pink, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'(BB6) Means of the dissertation are available'
+
+
+        # [1] Risk-bearers
+        node [color = red, shape = box, style = filled, fillcolor= pink, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'(BB7) Objective of the dissertation is achieved'
+'(BB7) Epistemological contribution'
+'(BB7) Methodological contribution'
+
+        # [1] Risk-bearers
+        node [color = none, shape = box, style = filled, fillcolor= lightgreen, fontname = Helvetica, fixedsize = false, fontsize = 20]
+'(BB3) Papers are produced'
+'(BB4) Objectives of papers are achieved'
+
+
+
+
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 26]
+
+        
+        # [4] sort or separate
+        subgraph  {
+        rank = same; '(BB7) Epistemological contribution' '(BB7) Methodological contribution''(BB7) Objective of the dissertation is achieved'
+        }
+
+        # [5] edges      
+        subgraph { 
+        edge [color = darkgrey, arrowhead = vee, arrowtail = none]
+'(BB1) Theoretical framework' -> '(BB2) Methods'
+'(BB2) Methods' -> '(BB3) Papers are produced'
+'(BB3) Papers are produced' -> '(BB4) Objectives of papers are achieved'
+'(BB4) Objectives of papers are achieved' -> {'(BB7) Epistemological contribution' '(BB7) Methodological contribution''(BB5) Research questions are answered'}
+'(BB5) Research questions are answered' -> '(BB6) Means of the dissertation are available'
+'(BB6) Means of the dissertation are available' -> '(BB7) Objective of the dissertation is achieved'
+
+
+
+        }
+        
+
+
+}
+
+        ")
+
+name_1305
+WRITE_AS_SVG(name_1305,"name_1305.svg")
+```
+
+## Existing methods and model paper
+```{r, results="hide"}
+
+name_1400 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+
+        # [7] data from previous stages  / response in model
+        node [color = darkgrey, shape = box, style = filled, fillcolor= lightgrey, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = black]
+        'LULC raster layer'
+
+        # [7] data from previous stages  / response in model
+        node [color = darkgrey, shape = box, style = filled, fillcolor= lightgrey, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = black]
+        'Hazard raster layers'
+        
+        # [1] Risk-bearers
+        node [color = darkgrey, shape = box, style = filled, fillcolor= lightgrey, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = black]
+        'LULC raster layer'
+        'damage = f(hazard magnitude)'
+        'Monte-Carlo simulations'
+        'Empirical probability distribution of damage'
+        
+
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 26, fontcolor = black]
+'(1) Hazard module'
+'(2) Asset module'
+
+
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 26, fontcolor = black]
+'(3) Aggregation module'
+
+        
+        # [4] sort or separate
+        subgraph  {
+        rank = same;
+        }
+
+        # [5] edges      
+        subgraph { 
+        edge [color = gray, arrowhead = vee, arrowtail = none]
+'(1) Hazard module' -> 'Hazard raster layers'
+'(2) Asset module' -> {'LULC raster layer' 'damage = f(hazard magnitude)'}
+{'Hazard raster layers' 'LULC raster layer' 'damage = f(hazard magnitude)'} -> '(3) Aggregation module'
+'(3) Aggregation module' -> 'Monte-Carlo simulations'
+'Monte-Carlo simulations' -> 'Empirical probability distribution of damage'
+
+        }
+        
+        # [5] edges      
+        subgraph { 
+        edge [color = gray, arrowhead = vee, arrowtail = none]
+
+
+        }
+
+ # [5] edges      
+        subgraph { 
+        edge [color = gray, arrowhead = vee, arrowtail = none]
+
+
+
+        } 
+}
+
+        ")
+
+name_1400
+WRITE_AS_SVG(name_1400,"name_1400.svg")
+```
+
+
+## LULC paper
+```{r, results="hide"}
+
+name_1410 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+
+        # [7] data from previous stages  / response in model
+        node [color = darkgrey, shape = box, style = filled, fillcolor= lightgrey, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = black]
+        'LULC raster layer'
+
+        # [7] data from previous stages  / response in model
+        node [color = darkgrey, shape = box, style = filled, fillcolor= lightgrey, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = gray]
+        'Hazard raster layers'
+        
+        # [1] Risk-bearers
+        node [color = darkgrey, shape = box, style = filled, fillcolor= lightgrey, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = gray]
+        'LULC raster layer'
+        'damage = f(hazard magnitude)'
+        'Monte-Carlo simulations'
+        'Empirical probability distribution of damage'
+        
+
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 26, fontcolor = gray]
+'(1) Hazard module'
+'(2) Asset module'
+
+
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 26, fontcolor = gray]
+'(3) Aggregation module'
+
+        
+        # [4] sort or separate
+        subgraph  {
+        rank = same;
+        }
+
+        # [5] edges      
+        subgraph { 
+        edge [color = gray, arrowhead = vee, arrowtail = none]
+'(1) Hazard module' -> 'Hazard raster layers'
+'(2) Asset module' -> {'LULC raster layer' 'damage = f(hazard magnitude)'}
+{'Hazard raster layers' 'LULC raster layer' 'damage = f(hazard magnitude)'} -> '(3) Aggregation module'
+'(3) Aggregation module' -> 'Monte-Carlo simulations'
+'Monte-Carlo simulations' -> 'Empirical probability distribution of damage'
+
+        }
+        
+        # [5] edges      
+        subgraph { 
+        edge [color = gray, arrowhead = vee, arrowtail = none]
+
+
+        }
+
+ # [5] edges      
+        subgraph { 
+        edge [color = gray, arrowhead = vee, arrowtail = none]
+
+
+
+        } 
+}
+
+        ")
+
+name_1410
+WRITE_AS_SVG(name_1410,"name_1410.svg")
+```
+
+## vulnerability paper
+```{r, results="hide"}
+
+name_1420 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+
+        # [7] data from previous stages  / response in model
+        node [color = darkgrey, shape = box, style = filled, fillcolor= lightgrey, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = black]
+        'LULC raster layer'
+
+        # [7] data from previous stages  / response in model
+        node [color = darkgrey, shape = box, style = filled, fillcolor= lightgrey, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = black]
+        'Hazard raster layers'
+        
+        # [1] Risk-bearers
+        node [color = darkgrey, shape = box, style = filled, fillcolor= lightgrey, fontname = Helvetica, fixedsize = false, fontsize = 20, fontcolor = gray]
+        'LULC raster layer'
+        'damage = f(hazard magnitude)'
+        'Monte-Carlo simulations'
+        'Empirical probability distribution of damage'
+        
+
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 26, fontcolor = black]
+'(1) Hazard module'
+'(2) Asset module'
+
+
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 26, fontcolor = gray]
+'(3) Aggregation module'
+
+        
+        # [4] sort or separate
+        subgraph  {
+        rank = same;
+        }
+
+        # [5] edges      
+        subgraph { 
+        edge [color = gray, arrowhead = vee, arrowtail = none]
+'(1) Hazard module' -> 'Hazard raster layers'
+'(2) Asset module' -> {'LULC raster layer' 'damage = f(hazard magnitude)'}
+{'Hazard raster layers' 'LULC raster layer' 'damage = f(hazard magnitude)'} -> '(3) Aggregation module'
+'(3) Aggregation module' -> 'Monte-Carlo simulations'
+'Monte-Carlo simulations' -> 'Empirical probability distribution of damage'
+
+        }
+        
+        # [5] edges      
+        subgraph { 
+        edge [color = gray, arrowhead = vee, arrowtail = none]
+
+
+        }
+
+ # [5] edges      
+        subgraph { 
+        edge [color = gray, arrowhead = vee, arrowtail = none]
+
+
+
+        } 
+}
+
+        ")
+
+name_1420
+WRITE_AS_SVG(name_1420,"name_1420.svg")
+```
+
+
+
+# Not used
 
 ## Vulnerability paper: Supporting elements to livelihoods vulnerable to flood risk
 ```{r}
@@ -2361,7 +3438,7 @@ name_300 <-
         ")
 
 name_300
-#WRITE_AS_SVG(name_300,"300.svg")
+
 ```
 
 ## Economic damages paper: Economic damages to elements supporting livelihoods
@@ -2443,7 +3520,73 @@ name_200 <-
 
 name_200
 
-#WRITE_AS_SVG(name_200,"nice.svg")
+
+```
+
+## Vulnerability paper: Supporting elements to livelihoods vulnerable to flood risk
+```{r}
+
+name_300 <- 
+  grViz(" digraph {
+        graph [overlap = true, fontsize = 14, color= grey]
+        
+        # [1] data not present in previous stages / response in general
+        node [color = red, shape = box, style = filled, fillcolor= mistyrose, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Vulnerable supporting elements are assets'
+        'Vulnerable supporting elements are not assets'        
+        
+         # [2] data present in next stage / final output
+        node [color = orange, shape = triangle, style = filled, fillcolor= OldLace, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Area size of farmland'
+        'Area size of settlement'
+        'Number of households'
+        'Hotspots of flood risk'        
+        
+        # [3] operations  / conditions or questions                
+        node [color = green, shape = diamond, style = filled, fillcolor= palegreen, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Which elements are considered in model?' 
+
+        # [7] data from previous stages  / response in model
+        node [color = blue, shape = oval, style = filled, fillcolor= lightcyan, fontname = Helvetica, fixedsize = false, fontsize = 14]
+        'Farmland'
+        'Settlement'
+        
+        # [6] title names
+        node [shape = plaintext, style = filled, fillcolor= white, fontname = Helvetica, fixedsize = false, fontsize = 20]
+        'Supporting elements to livelihoods vulnerable to flood risk'
+        
+        # [4] sort or separate
+        subgraph {
+        rank = same;
+        }
+
+      # [5] edges      
+        subgraph cluster_01 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Supporting elements to livelihoods vulnerable to flood risk'
+        }
+        
+        # [5] edges      
+        subgraph cluster_02 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Supporting elements to livelihoods vulnerable to flood risk' -> {'Vulnerable supporting elements are assets'  'Vulnerable supporting elements are not assets'}
+        {'Vulnerable supporting elements are assets'  'Vulnerable supporting elements are not assets'} ->  'Which elements are considered in model?' 
+        }
+
+        # [5] edges      
+        subgraph cluster_03 { 
+        edge [color = grey, arrowhead = vee, arrowtail = none]
+        'Which elements are considered in model?' -> {'Farmland' 'Settlement'}
+        'Farmland' -> 'Area size of farmland'
+        'Settlement' -> {'Area size of settlement' 'Number of households'}
+        {'Area size of farmland''Area size of settlement'} -> 'Hotspots of flood risk'
+        }
+        
+        }
+        
+        ")
+
+name_300
 
 ```
 
